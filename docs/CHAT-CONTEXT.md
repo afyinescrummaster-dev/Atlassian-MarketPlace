@@ -24,10 +24,12 @@ Forge test app `atlassian-first-app-test` for Jira Cloud.
    `src/frontend/project-report.jsx`
 3. **Executive Report Preview** — `jira:projectSettingsPage`, Custom UI,
    `static/executive-preview/`
+4. **Admin Health Lab** — `jira:adminPage`, UI Kit,
+   `src/frontend/admin-health.jsx` (see `docs/ADMIN-HEALTH-LAB.md`)
 
 Forge allows only one `jira:projectPage`. The executive preview stays under
 Project settings. Preserve its visual design (navy header, KPI strip, donut,
-attention table).
+attention table). Do not couple Admin Health Lab into project-report code.
 
 ## How reports get data
 
@@ -39,7 +41,8 @@ attention table).
 - Mappings persist in Forge KVS:
   - site default: `field-mapping:site`
   - project override: `field-mapping:project:{KEY}`
-- Scopes: `read:jira-work`, `storage:app`
+- Scopes: `read:jira-work`, `storage:app` (Admin Health Lab v0.1 adds no new
+  scopes; uses project/search + field under `read:jira-work`)
 
 ## Field mapping (implemented, not yet confirmed on SALES)
 
