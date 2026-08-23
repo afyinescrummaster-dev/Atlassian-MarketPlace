@@ -12,7 +12,7 @@ Forge test app `atlassian-first-app-test` for Jira Cloud.
 - Registered app ID (do not change):
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
-- Latest known deploy: development **4.2.0** (2026-08-23 visible change-check banner)
+- Latest known deploy: development **4.3.0** (Sparky celebration banner)
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -144,6 +144,12 @@ Local checks on that run (no secrets needed):
 - `npm run build` — passed
 
 Blocked on that run: `forge deploy -e development --non-interactive`
+
+### 2026-08-23 — visible change-check banner
+
+Added a discovery `SectionMessage` at the top of **Issue Data Test** so a
+human can confirm a live UI deploy without reading logs. Deployed development
+**4.2.0**.
 
 ### 2026-08-23 — new agent: secrets work + deploy 4.1.0
 
