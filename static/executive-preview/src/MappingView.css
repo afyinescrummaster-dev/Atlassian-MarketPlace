@@ -1,0 +1,145 @@
+.map-page {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 16px 16px 32px;
+  color: #172b4d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+}
+
+.map-hero,
+.map-panel,
+.map-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(9, 30, 66, 0.08);
+}
+
+.map-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  margin-bottom: 12px;
+}
+
+.map-kicker {
+  margin: 0 0 6px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: #6b778c;
+}
+
+.map-hero h2,
+.map-panel h3,
+.map-card h3 {
+  margin: 0 0 8px;
+}
+
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.map-card,
+.map-panel {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.map-card p,
+.map-panel p,
+.map-search {
+  color: #6b778c;
+  font-size: 13px;
+}
+
+.map-search,
+.map-panel label,
+.map-panel fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+input,
+select {
+  font: inherit;
+  padding: 8px;
+  border: 1px solid #dfe1e6;
+  border-radius: 6px;
+}
+
+.map-selected {
+  margin: 8px 0 0;
+  color: #172b4d !important;
+  font-weight: 600;
+}
+
+.map-suggest {
+  margin: 6px 0 0;
+}
+
+.map-standard,
+.map-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.map-standard li,
+.map-chips label {
+  padding: 8px 10px;
+  background: #f4f5f7;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.map-standard span {
+  display: block;
+  color: #6b778c;
+}
+
+.map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.map-actions button,
+.map-secondary {
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #0052cc;
+  color: #fff;
+  cursor: pointer;
+}
+
+.map-secondary {
+  background: #dfe1e6;
+  color: #172b4d;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px 8px 8px 0;
+  border-bottom: 1px solid #dfe1e6;
+}

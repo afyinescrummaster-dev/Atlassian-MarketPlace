@@ -4,3 +4,5 @@ node_modules/
 .env.*
 !.env.example
 npm-debug.log*
+static/executive-preview/build
+static/executive-preview/node_modules
