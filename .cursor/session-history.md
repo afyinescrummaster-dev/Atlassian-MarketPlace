@@ -7,6 +7,14 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-23 — visible Issue Data Test banner (4.2.0)
+
+Added a blue discovery banner titled **Cloud Agent change check** to the
+Issue Data Test issue panel so the user can open any issue and confirm a
+live UI change. Deployed development **4.2.0**.
+
+---
+
 ## 2026-08-23 — secrets verified + development deploy 4.1.0
 
 ### Agent
