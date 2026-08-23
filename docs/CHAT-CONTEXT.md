@@ -119,9 +119,51 @@ SALES. The user still needs to confirm mappings in the UI.
 User asked when code was last pushed (August 20) and asked to push current
 work plus chat context so a mobile/remote agent has history.
 
+### 2026-08-23 — mobile secrets
+
+User added Cursor Cloud Agent secrets so mobile can run Forge without a
+local `.env`. Secrets are not in this repo.
+
+## Secrets for mobile and Cloud Agents
+
+Do not ask the user to paste the token into chat. Do not print
+`FORGE_API_TOKEN`. Do not commit `.env`.
+
+Add these in [cursor.com/dashboard/cloud-agents](https://cursor.com/dashboard/cloud-agents)
+under **Secrets**, then start a **new** Cloud Agent. An existing chat will
+not pick up newly added secrets.
+
+| Name | Cursor secret type | Why |
+|---|---|---|
+| `FORGE_EMAIL` | Environment Variable | Agent can see which Atlassian account to use |
+| `FORGE_API_TOKEN` | Runtime Secret | Injected for `forge`, redacted from chat, tool output, and commits |
+
+Do not use Build Secret. That exists only during a Docker image build.
+
+If Environment-scoped secrets are unset on the VM, add the same keys under
+**Personal** scope and start another new agent.
+
+On a Cloud Agent VM, prefer the injected environment variables. If a `.env`
+file is required, create it on the VM from those variables and keep it
+gitignored.
+
+### How to verify secrets without leaking the token
+
+```bash
+# Email may be printed.
+if [ -n "$FORGE_EMAIL" ]; then echo "FORGE_EMAIL is set: $FORGE_EMAIL"; else echo "FORGE_EMAIL is unset"; fi
+
+# Token: only report set/unset and length. Never echo the value.
+if [ -n "$FORGE_API_TOKEN" ]; then echo "FORGE_API_TOKEN is set; length=${#FORGE_API_TOKEN}"; else echo "FORGE_API_TOKEN is unset"; fi
+```
+
+Success: email prints, token is set (or appears as `[REDACTED]` if a tool
+tries to read it). Failure: one or both unset. Then try Personal scope and
+a new agent.
+
 ## CLI notes
 
-Forge CLI is not global. Use:
+On the laptop, Forge CLI is not global. Use:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
@@ -130,6 +172,9 @@ set -a; . ./.env; set +a
 
 `.env` is gitignored. It holds `FORGE_EMAIL` and `FORGE_API_TOKEN`. Never
 print or commit the token. `.env.example` is the placeholder file.
+
+On mobile / Cloud Agents, use the injected environment variables instead of
+a committed file.
 
 ```bash
 npm run lint:code
@@ -148,3 +193,4 @@ Upgrade the install only if Forge says a new scope is required.
 - Do not replace Project Health Report
 - Do not change the registered Forge app ID
 - Do not commit `.env` or tokens
+- Do not print `FORGE_API_TOKEN` or ask the user to paste it into chat
