@@ -124,6 +124,31 @@ work plus chat context so a mobile/remote agent has history.
 User added Cursor Cloud Agent secrets so mobile can run Forge without a
 local `.env`. Secrets are not in this repo.
 
+### 2026-08-23 — secrets verification on existing agent
+
+Agent run `bc-01a02b40-6a55-7f66-9af7-dd036d4bf172` ("Known code context")
+re-checked the VM:
+
+- `FORGE_EMAIL` — unset
+- `FORGE_API_TOKEN` — unset
+
+User said the secrets were already configured in the Cursor dashboard.
+They were probably not wrong. **Existing Cloud Agent chats do not receive
+secrets added after the run started** (or secrets only present in another
+scope). This chat cannot deploy.
+
+Local checks on that run (no secrets needed):
+
+- `npm run lint:code` — passed
+- `npm test` — 28/28 passed
+- `npm run build` — passed
+
+Blocked: `forge deploy -e development --non-interactive`
+
+**New agent instructions:** run the safe secrets check below first. If both
+are set, deploy. If unset, fix name/type/scope and start another new agent.
+Do not ask the user to paste `FORGE_API_TOKEN` into chat.
+
 ## Secrets for mobile and Cloud Agents
 
 Do not ask the user to paste the token into chat. Do not print
