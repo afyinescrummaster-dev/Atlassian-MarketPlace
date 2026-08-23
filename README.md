@@ -4,7 +4,7 @@ For Cursor mobile or a remote agent, start with
 [docs/CHAT-CONTEXT.md](docs/CHAT-CONTEXT.md). That file is the saved chat
 handoff for this repo.
 
-A Forge app with three modules:
+A Forge app with four modules:
 
 - **Issue Data Test** (`jira:issuePanel`, UI Kit) — live fields for the open issue
 - **Project Health Report** (`jira:projectPage`, UI Kit) — project-level metrics
@@ -14,6 +14,9 @@ A Forge app with three modules:
   Forge allows only one `jira:projectPage` per app, so this preview is a
   separate project-level page under Project settings and does not replace
   Project Health Report.
+- **Admin Health Lab** (`jira:adminPage`, UI Kit) — experimental read-only site
+  hygiene dashboard under Jira Administration → Apps. See
+  [docs/ADMIN-HEALTH-LAB.md](docs/ADMIN-HEALTH-LAB.md).
 
 All modules share one registered app ID and one resolver function. The existing
 Project Health Report is unchanged.
@@ -23,9 +26,12 @@ Project Health Report is unchanged.
 - `src/frontend/index.jsx` — issue panel UI Kit resource (`main`)
 - `src/frontend/project-report.jsx` — Project Health Report UI Kit resource
   (`project-report`)
+- `src/frontend/admin-health.jsx` — Admin Health Lab UI Kit resource
 - `static/executive-preview/` — Executive Report Preview Custom UI source
+- `src/admin-health/` — pure site hygiene analysis (projects, fields, score)
 - `src/resolvers/issue-panel.js` — `getIssueData`
 - `src/resolvers/project-report.js` — `getProjectHealthReport`
+- `src/resolvers/admin-health.js` — `getAdminHealthReport`
 - `src/resolvers/mapping.js` — field catalog, mapping save, and mapping test
 - `src/resolvers/index.js` — registers resolver methods
 - `src/report/metrics.js` — pure metric calculations used by both report UIs
