@@ -12,7 +12,7 @@ Forge test app `atlassian-first-app-test` for Jira Cloud.
 - Registered app ID (do not change):
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
-- Latest known deploy: development **4.3.0** (Sparky celebration banner)
+- Latest known deploy: development **(see latest forge deploy; v0.2 Admin Health Lab)**
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -170,6 +170,15 @@ Then:
 
 Conclusion: dashboard secrets were fine; starting a **new** agent after they
 exist was the fix.
+
+### 2026-08-23 — Admin Health Lab v0.2
+
+Built **Findings & Recommendations** on top of v0.1 without replacing it:
+
+- Findings model + project classifications + duplicate type-mismatch
+- Actionable recommendation drill-downs + stacked responsive cards
+- Docs: `docs/ADMIN-HEALTH-LAB.md`, `docs/ADMIN-HEALTH-LAB-REPORT.md`
+- Tests: 44 passing; no new Forge scopes
 
 ## Secrets for mobile and Cloud Agents
 

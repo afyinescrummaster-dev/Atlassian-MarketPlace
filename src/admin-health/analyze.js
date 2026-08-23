@@ -1,5 +1,6 @@
 import { INACTIVE_DAYS } from "./constants.js";
 import { analyzeFields } from "./fields.js";
+import { summarizeFindings } from "./findings.js";
 import { summarizeProjects } from "./projects.js";
 import { calculateHealthScore } from "./score.js";
 import { buildRecommendations } from "./recommendations.js";
@@ -17,6 +18,12 @@ export const buildAdminHealthReport = ({
 } = {}) => {
   const projectSummary = summarizeProjects(projects, { now, inactiveDays });
   const fieldSummary = analyzeFields(fields);
+  const findingRecords = [
+    ...(projectSummary.findingRecords || []),
+    ...(fieldSummary.findingRecords || []),
+  ];
+  const findings = summarizeFindings(findingRecords);
+
   const health = calculateHealthScore({
     duplicateGroupCount: fieldSummary.duplicateGroupCount,
     emptyProjectCount: projectSummary.empty,
@@ -24,21 +31,17 @@ export const buildAdminHealthReport = ({
     missingLeadCount: projectSummary.missingLead,
     lowVolumeProjectCount: projectSummary.lowVolume,
   });
+
   const recommendations = buildRecommendations({
     fields: fieldSummary,
     projects: projectSummary,
+    findings,
   });
-
-  const findingCount =
-    fieldSummary.duplicateGroupCount +
-    projectSummary.empty +
-    projectSummary.potentiallyInactive +
-    projectSummary.missingLead +
-    projectSummary.lowVolume;
 
   return {
     generatedAt: now.toISOString(),
     inactiveDays,
+    version: "0.2",
     overview: {
       totalProjects: projectSummary.total,
       softwareProjects: projectSummary.byType.software,
@@ -48,14 +51,25 @@ export const buildAdminHealthReport = ({
       activeProjects: projectSummary.active,
       potentiallyInactiveProjects: projectSummary.potentiallyInactive,
       emptyProjects: projectSummary.empty,
+      lowVolumeProjects: projectSummary.lowVolume,
+      missingLeadProjects: projectSummary.missingLead,
       archivedProjects: projectSummary.archived,
+      strongArchiveCandidates: projectSummary.strongArchiveCandidates,
+      reviewForArchive: projectSummary.reviewForArchive,
+      investigateInactivity: projectSummary.investigateInactivity,
       totalCustomFields: fieldSummary.customCount,
       totalSystemFields: fieldSummary.systemCount,
       totalFields: fieldSummary.total,
       duplicateFieldGroups: fieldSummary.duplicateGroupCount,
-      potentialFindings: findingCount,
+      typeMismatchFieldGroups: fieldSummary.typeMismatchGroupCount,
+      potentialFindings: findings.total,
+      findingsTotal: findings.total,
+      findingsHigh: findings.bySeverity.High,
+      findingsReview: findings.bySeverity.Review,
+      findingsInformational: findings.bySeverity.Informational,
     },
     health,
+    findings,
     recommendations,
     projects: projectSummary,
     fields: fieldSummary,

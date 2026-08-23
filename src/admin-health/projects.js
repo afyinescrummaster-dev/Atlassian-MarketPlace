@@ -1,4 +1,12 @@
-import { INACTIVE_DAYS, LOW_VOLUME_MAX_ISSUES } from "./constants.js";
+import {
+  CATEGORY,
+  CLASSIFICATION,
+  INACTIVE_DAYS,
+  LOW_VOLUME_MAX_ISSUES,
+  SEVERITY,
+} from "./constants.js";
+import { classifyProjectRecommendation } from "./classify.js";
+import { createFinding } from "./findings.js";
 import {
   daysSince,
   isPotentiallyInactive,
@@ -18,6 +26,38 @@ const hasLead = (project) => {
       lead.key ||
       lead.self,
   );
+};
+
+const leadDisplayName = (project) => {
+  const lead = project?.lead;
+  if (!lead || typeof lead !== "object") {
+    return null;
+  }
+
+  if (typeof lead.displayName === "string" && lead.displayName.trim()) {
+    return lead.displayName.trim();
+  }
+
+  if (typeof lead.name === "string" && lead.name.trim()) {
+    return lead.name.trim();
+  }
+
+  return null;
+};
+
+const severityForCode = (code, classification) => {
+  if (
+    classification?.code === CLASSIFICATION.STRONG_ARCHIVE &&
+    (code === "empty" || code === "inactive" || code === "low-volume")
+  ) {
+    return SEVERITY.HIGH;
+  }
+
+  if (code === "archived" || code === "low-volume") {
+    return SEVERITY.INFORMATIONAL;
+  }
+
+  return SEVERITY.REVIEW;
 };
 
 /**
@@ -43,6 +83,7 @@ export const analyzeProject = (
       : null;
   const archived = project?.archived === true || project?.status === "archived";
   const leadPresent = hasLead(project);
+  const leadName = leadDisplayName(project);
   const ageDays = daysSince(lastIssueUpdateTime, now);
   const inactive = isPotentiallyInactive(lastIssueUpdateTime, {
     now,
@@ -54,6 +95,24 @@ export const analyzeProject = (
     totalIssueCount > 0 &&
     totalIssueCount < LOW_VOLUME_MAX_ISSUES;
 
+  const base = {
+    key,
+    name,
+    typeKey,
+    typeLabel: projectTypeLabel(typeKey),
+    archived,
+    leadPresent,
+    leadName,
+    totalIssueCount,
+    lastIssueUpdateTime,
+    ageDays,
+    inactive,
+    empty,
+    lowVolume,
+  };
+
+  const classification = classifyProjectRecommendation(base);
+
   const findings = [];
 
   if (empty) {
@@ -61,6 +120,7 @@ export const analyzeProject = (
       code: "empty",
       title: "Empty project",
       reason: "This project currently contains no issues.",
+      severity: severityForCode("empty", classification),
     });
   }
 
@@ -72,6 +132,7 @@ export const analyzeProject = (
         ageDays == null
           ? `No issue updated within the last ${inactiveDays} days.`
           : `No issue updated in ${ageDays} days (threshold: ${inactiveDays} days).`,
+      severity: severityForCode("inactive", classification),
     });
   }
 
@@ -81,6 +142,7 @@ export const analyzeProject = (
       title: "Missing project lead",
       reason:
         "Jira did not return a project lead for this project (expand=lead).",
+      severity: severityForCode("missing-lead", classification),
     });
   }
 
@@ -89,6 +151,7 @@ export const analyzeProject = (
       code: "low-volume",
       title: "Very low issue volume",
       reason: `Only ${totalIssueCount} issue${totalIssueCount === 1 ? "" : "s"} in the project.`,
+      severity: severityForCode("low-volume", classification),
     });
   }
 
@@ -97,24 +160,64 @@ export const analyzeProject = (
       code: "archived",
       title: "Archived project",
       reason: "This project is archived in Jira.",
+      severity: severityForCode("archived", classification),
     });
   }
 
   return {
-    key,
-    name,
-    typeKey,
-    typeLabel: projectTypeLabel(typeKey),
-    archived,
-    leadPresent,
-    totalIssueCount,
-    lastIssueUpdateTime,
-    ageDays,
-    inactive,
-    empty,
-    lowVolume,
+    ...base,
+    classification,
     findings,
   };
+};
+
+const buildProjectFindingRecords = (project) => {
+  const classification = project.classification;
+  const records = [];
+
+  for (const finding of project.findings) {
+    if (finding.code === "archived") {
+      // Keep archived as evidence on the project, but do not inflate actionable finding counts.
+      continue;
+    }
+
+    const filterKeys = [finding.code, "all"];
+    if (classification?.code) {
+      filterKeys.push(classification.code);
+    }
+
+    records.push(
+      createFinding({
+        id: `project:${project.key}:${finding.code}`,
+        category: CATEGORY.PROJECTS,
+        title: finding.title,
+        severity: finding.severity || SEVERITY.REVIEW,
+        affectedObject: {
+          type: "project",
+          key: project.key,
+          name: project.name,
+          projectType: project.typeLabel,
+        },
+        reason: finding.reason,
+        evidence: {
+          totalIssueCount: project.totalIssueCount,
+          lastIssueUpdateTime: project.lastIssueUpdateTime,
+          ageDays: project.ageDays,
+          leadName: project.leadName,
+          leadPresent: project.leadPresent,
+          archived: project.archived,
+          findingCodes: project.findings.map((item) => item.code),
+        },
+        recommendation:
+          classification?.explanation ||
+          "Review this project with its owners. Admin Health Lab does not change Jira configuration.",
+        classification: classification?.code || null,
+        filterKeys,
+      }),
+    );
+  }
+
+  return records;
 };
 
 export const summarizeProjects = (
@@ -139,6 +242,10 @@ export const summarizeProjects = (
   let lowVolume = 0;
   let archived = 0;
   let insightMissing = 0;
+  let strongArchiveCandidates = 0;
+  let reviewForArchive = 0;
+  let investigateInactivity = 0;
+  let reviewOwnership = 0;
 
   for (const project of analyzed) {
     if (project.typeKey && byType[project.typeKey] != null) {
@@ -178,7 +285,6 @@ export const summarizeProjects = (
       project.totalIssueCount > 0 &&
       !project.lastIssueUpdateTime
     ) {
-      // Has issues but no last-update timestamp — treat as active-unknown, count as active.
       active += 1;
     }
 
@@ -189,12 +295,26 @@ export const summarizeProjects = (
     if (project.lowVolume) {
       lowVolume += 1;
     }
+
+    if (project.classification?.code === CLASSIFICATION.STRONG_ARCHIVE) {
+      strongArchiveCandidates += 1;
+    } else if (project.classification?.code === CLASSIFICATION.REVIEW_ARCHIVE) {
+      reviewForArchive += 1;
+    } else if (project.classification?.code === CLASSIFICATION.INVESTIGATE) {
+      investigateInactivity += 1;
+    } else if (project.classification?.code === CLASSIFICATION.OWNERSHIP) {
+      reviewOwnership += 1;
+    }
   }
 
   const flagged = analyzed.filter((project) =>
     project.findings.some((finding) =>
       ["empty", "inactive", "missing-lead", "low-volume"].includes(finding.code),
     ),
+  );
+
+  const findingRecords = flagged.flatMap((project) =>
+    buildProjectFindingRecords(project),
   );
 
   return {
@@ -208,7 +328,12 @@ export const summarizeProjects = (
     archived,
     insightMissing,
     inactiveDays,
+    strongArchiveCandidates,
+    reviewForArchive,
+    investigateInactivity,
+    reviewOwnership,
     projects: analyzed,
     flagged,
+    findingRecords,
   };
 };

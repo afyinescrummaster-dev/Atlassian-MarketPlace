@@ -15,8 +15,8 @@ A Forge app with four modules:
   separate project-level page under Project settings and does not replace
   Project Health Report.
 - **Admin Health Lab** (`jira:adminPage`, UI Kit) — experimental read-only site
-  hygiene dashboard under Jira Administration → Apps. See
-  [docs/ADMIN-HEALTH-LAB.md](docs/ADMIN-HEALTH-LAB.md).
+  hygiene dashboard (v0.2 Findings & Recommendations). Open via Connected Apps
+  → Configure, or see [docs/ADMIN-HEALTH-LAB.md](docs/ADMIN-HEALTH-LAB.md).
 
 All modules share one registered app ID and one resolver function. The existing
 Project Health Report is unchanged.

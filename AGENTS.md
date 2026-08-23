@@ -14,14 +14,10 @@ When you finish meaningful work, append a dated entry to both
 
 ## Status (2026-08-23)
 
-Secrets verified on agent `bc-01a02d23…`. Development deploy **4.1.0** succeeded.
+Admin Health Lab **v0.2** (Findings & Recommendations) is in progress on
+`cursor/admin-health-lab-v02-0bfb`. Secrets verified earlier; deploy with:
 
-Before further deploys:
-
-1. Run the safe secrets check in `docs/CHAT-CONTEXT.md` (do not print the token).
-2. If secrets are set, ensure Forge CLI is on `PATH` (`$HOME/.local/bin`), then:
-   `npm run lint:code && npm test && npm run build && forge deploy -e development --non-interactive`
-3. First non-interactive session may need:
-   `forge settings set usage-analytics false`
-4. Upgrade the install only if Forge says scopes changed.
-5. Do not change the registered Forge app ID.
+1. Safe secrets check in `docs/CHAT-CONTEXT.md` (do not print the token).
+2. `npm run lint:code && npm test && npm run build && forge deploy -e development --non-interactive`
+3. Open Configure deep link or Connected Apps → Configure.
+4. Do not change the registered Forge app ID.

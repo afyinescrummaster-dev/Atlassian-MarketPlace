@@ -15,17 +15,22 @@ const limitations = [
   {
     id: "no-workflow-screens",
     detail:
-      "v0.1 does not analyze workflows, screens, permission schemes, or field contexts.",
+      "v0.2 does not analyze workflows, screens, permission schemes, or field contexts. Findings stay within projects + custom-field names.",
   },
   {
     id: "duplicate-rule-simple",
     detail:
-      "Duplicate custom fields are detected only by trim/case-normalized exact name match — no fuzzy matching.",
+      "Duplicate custom fields are detected only by trim/case-normalized exact name match — no fuzzy matching. Type mismatch is reported when types differ within a group.",
   },
   {
     id: "admin-visibility",
     detail:
-      "jira:adminPage is only visible to users who can open Jira Administration. Forge scopes do not grant that product role.",
+      "jira:adminPage Configure is opened from Connected Apps or the /jira/settings/apps/configure/{appId}/{envId} URL. Forge scopes do not grant the Jira admin product role.",
+  },
+  {
+    id: "no-destructive-actions",
+    detail:
+      "Admin Health Lab never archives, deletes, or modifies projects or fields. Classifications are advisory only.",
   },
 ];
 

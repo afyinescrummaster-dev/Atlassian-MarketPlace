@@ -7,7 +7,24 @@ Update this file at the end of meaningful sessions.
 
 ---
 
-## 2026-08-23 — visible Issue Data Test banner (4.2.0)
+## 2026-08-23 — Admin Health Lab v0.2 Findings & Recommendations
+
+### Goal
+Make existing Admin Health findings actionable without adding destructive
+actions or broad new Jira admin APIs.
+
+### Done
+- Findings model (`findings.js`) + project classifications (`classify.js`)
+- Duplicate groups with type-mismatch signal
+- Summary landing + drill-down recommendation cards + stacked cards UI
+- Docs + report updated; lint/tests/build green (44 tests)
+
+### Open
+- Deploy development and verify Configure deep link
+
+---
+
+## 2026-08-23 — visible Issue Data Test banner (4.2.0 / 4.3.0 Sparky)
 
 Added a blue discovery banner titled **Cloud Agent change check** to the
 Issue Data Test issue panel so the user can open any issue and confirm a
