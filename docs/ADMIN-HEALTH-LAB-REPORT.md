@@ -1,7 +1,7 @@
 # Admin Health Lab v0.2 — Final Report
 
-Findings & Recommendations release. Branch:
-`cursor/admin-health-lab-v02-0bfb`.
+v0.2 Findings & Recommendations release. Branch:
+`cursor/admin-health-lab-v02-0bfb`. Deployed development **4.6.0**.
 
 ---
 
