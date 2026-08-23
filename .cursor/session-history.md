@@ -3,10 +3,37 @@
 Durable stand-in for Cursor Cloud chat history across agent runs.
 Full handoff: **`docs/CHAT-CONTEXT.md`** (always read that first).
 
-Prior agent URL (secrets were **not** injected here — start a **new** agent):
-https://cursor.com/agents/bc-01a02b40-6a55-7f66-9af7-dd036d4bf172
-
 Update this file at the end of meaningful sessions.
+
+---
+
+## 2026-08-23 — secrets verified + development deploy 4.1.0
+
+### Agent
+https://cursor.com/agents/bc-01a02d23-ed0b-7089-9fa7-d2dadab90bfb
+("Secrets testing code")
+
+### Goal
+Pull the secrets-testing handoff from `main` and verify Cloud Agent secrets
+so Forge deploy works.
+
+### Secrets check (this run) — **passed**
+- `FORGE_EMAIL` — set (`afyineagilecoach@gmail.com`)
+- `FORGE_API_TOKEN` — set (length 192; value not printed)
+- `CLOUD_AGENT_INJECTED_SECRET_NAMES` included `FORGE_API_TOKEN`
+- Confirms: secrets inject on **new** agent start; prior chat
+  (`bc-01a02b40…`) could not see them because it started earlier.
+
+### Validation
+- `npm run lint:code` — passed
+- `npm test` — 28/28 passed
+- `npm run build` — passed
+- `forge deploy -e development --non-interactive` — **Deployed 4.1.0**
+
+### Notes
+- Installed `@forge/cli` to `$HOME/.local` (no global root install)
+- Required once: `forge settings set usage-analytics false` for
+  `--non-interactive`
 
 ---
 

@@ -12,7 +12,7 @@ Forge test app `atlassian-first-app-test` for Jira Cloud.
 - Registered app ID (do not change):
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
-- Latest known deploy before this push: development **4.0.0**
+- Latest known deploy: development **4.1.0** (2026-08-23 secrets-test agent)
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -135,7 +135,7 @@ re-checked the VM:
 User said the secrets were already configured in the Cursor dashboard.
 They were probably not wrong. **Existing Cloud Agent chats do not receive
 secrets added after the run started** (or secrets only present in another
-scope). This chat cannot deploy.
+scope). That chat could not deploy.
 
 Local checks on that run (no secrets needed):
 
@@ -143,11 +143,24 @@ Local checks on that run (no secrets needed):
 - `npm test` — 28/28 passed
 - `npm run build` — passed
 
-Blocked: `forge deploy -e development --non-interactive`
+Blocked on that run: `forge deploy -e development --non-interactive`
 
-**New agent instructions:** run the safe secrets check below first. If both
-are set, deploy. If unset, fix name/type/scope and start another new agent.
-Do not ask the user to paste `FORGE_API_TOKEN` into chat.
+### 2026-08-23 — new agent: secrets work + deploy 4.1.0
+
+Agent run `bc-01a02d23-ed0b-7089-9fa7-d2dadab90bfb` ("Secrets testing code")
+pulled `main` (handoff at `ffe64b9`) and re-checked:
+
+- `FORGE_EMAIL` — set
+- `FORGE_API_TOKEN` — set (length reported only; value not printed)
+
+Then:
+
+- `npm run lint:code` / `npm test` (28) / `npm run build` — passed
+- `forge settings set usage-analytics false` (required for non-interactive)
+- `forge deploy -e development --non-interactive` — **Deployed 4.1.0**
+
+Conclusion: dashboard secrets were fine; starting a **new** agent after they
+exist was the fix.
 
 ## Secrets for mobile and Cloud Agents
 

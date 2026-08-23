@@ -12,10 +12,16 @@ When you finish meaningful work, append a dated entry to both
 `.cursor/session-history.md` and the chat-history section of
 `docs/CHAT-CONTEXT.md`.
 
-## Immediate next step (2026-08-23)
+## Status (2026-08-23)
+
+Secrets verified on agent `bc-01a02d23…`. Development deploy **4.1.0** succeeded.
+
+Before further deploys:
 
 1. Run the safe secrets check in `docs/CHAT-CONTEXT.md` (do not print the token).
-2. If secrets are set, install Forge CLI if needed, then:
+2. If secrets are set, ensure Forge CLI is on `PATH` (`$HOME/.local/bin`), then:
    `npm run lint:code && npm test && npm run build && forge deploy -e development --non-interactive`
-3. Upgrade the install only if Forge says scopes changed.
-4. Do not change the registered Forge app ID.
+3. First non-interactive session may need:
+   `forge settings set usage-analytics false`
+4. Upgrade the install only if Forge says scopes changed.
+5. Do not change the registered Forge app ID.
