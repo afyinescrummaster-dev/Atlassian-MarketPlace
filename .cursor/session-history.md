@@ -20,7 +20,7 @@ actions or broad new Jira admin APIs.
 - Docs + report updated; lint/tests/build green (44 tests)
 
 ### Open
-- Deploy development and verify Configure deep link
+- Deployed development **4.6.0** — open Configure deep link to verify
 
 ---
 
