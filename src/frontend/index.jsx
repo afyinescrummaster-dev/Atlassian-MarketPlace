@@ -138,10 +138,9 @@ const App = () => {
 
   return (
     <Stack space="space.075">
-      <SectionMessage appearance="discovery" title="Cloud Agent change check">
+      <SectionMessage appearance="discovery" title="We did it, Sparky">
         <Text>
-          If you can read this banner, the agent deployed a live UI change
-          (2026-08-23).
+          We actually created our first Jira app.
         </Text>
       </SectionMessage>
       <Field label="Key" value={display(issue.key, FALLBACKS.key)} />
