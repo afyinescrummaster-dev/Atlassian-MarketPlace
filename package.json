@@ -1,28 +1,25 @@
 {
   "name": "atlassian-first-app-test",
   "version": "1.0.0",
-  "description": "A minimal Jira issue-panel Hello World Forge app.",
+  "description": "Forge Jira issue panel, Project Health Report, and Executive Report Preview.",
   "private": true,
   "main": "index.js",
   "scripts": {
     "lint": "forge lint",
-    "lint:code": "eslint src",
+    "lint:code": "eslint src test static/executive-preview/src",
+    "test": "node --test test/*.test.js",
+    "build": "npm run build --prefix static/executive-preview",
     "validate": "forge lint && forge deploy --dry-run"
   },
-  "overrides": {
-    "websocket-driver": "0.7.5",
-    "sockjs": {
-      "websocket-driver": "0.7.5"
-    }
-  },
   "dependencies": {
+    "@forge/api": "^8.0.4",
     "@forge/bridge": "^6.3.0",
+    "@forge/kvs": "^2.0.4",
     "@forge/react": "^12.1.2",
     "@forge/resolver": "^2.0.0",
     "react": "^18.3.1"
   },
   "devDependencies": {
-    "@forge/cli": "13.4.0",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1"
