@@ -30,6 +30,9 @@ modules:
         function: resolver
       render: native
       title: Admin Health Lab
+      # Surfaces a Configure button on admin.atlassian.com Connected Apps
+      # (Jira Settings → Apps now redirects there and hides plain admin pages).
+      useAsConfig: true
       icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
   function:
     - key: resolver
