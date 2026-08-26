@@ -1,125 +1,102 @@
-# Admin Health Lab v0.2 — Final Report
+# Jira Admin Health v0.3 — Marketplace readiness report
 
-v0.2 Findings & Recommendations release. Branch:
-`cursor/admin-health-lab-v02-0bfb`. Deployed development **4.6.0**.
+Branch: `cursor/admin-health-marketplace-ui-0bfb`
 
 ---
 
-### What Changed
+### Current Product
 
-v0.2 keeps Admin Health Lab v0.1 retrieval and scoring, and makes findings
-actionable:
+**Jira Admin Health** is a read-only Forge `jira:adminPage` that analyzes site
+projects and custom fields, scores hygiene, prioritizes findings, and deep-links
+admins into Jira to investigate. It does not modify configuration.
 
-- Consistent findings model (Projects + Custom Fields)
-- Deterministic project recommendation classifications with explanations
-- Landing page: Site Health score, findings by severity, category summaries
-- Recommendation cards drill into filtered project/field views
-- Expandable duplicate field groups + type-mismatch highlighting
-- Stacked cards + Select filters for narrow screens
-- No destructive actions; no new Forge scopes; no external AI
+### Improvements Made (v0.3)
 
-### Findings Architecture
+- Customer-facing rename from “Admin Health Lab” → **Jira Admin Health**
+- Marketplace-style overview: Site Health / Needs Review / Analyzed cards
+- “Why is my score?” clickable chips → filtered findings
+- Recommended review cards with drill-down + Open Jira admin where relevant
+- Project cards: evidence, expandable detail, Open project / Open project settings
+- Duplicate field cards: expandable members, type-mismatch callout, Review field
+- Configurable inactivity threshold (90/180/365) persisted in KVS
+- Partial section errors (projects or fields can fail independently)
+- Loading, empty, permission-friendly error, and trust footer copy
+- Centralized deep-link helpers (`navigation.js`)
 
-`createFinding` / `summarizeFindings` in `src/admin-health/findings.js`.
+### User Journey
 
-Each finding: `id`, `category`, `title`, `severity`, `affectedObject`,
-`reason`, `evidence`, `recommendation`, `classification`, `filterKeys`.
+Install → Connected Apps Configure / deep link → Overview loads → Site Health +
+Needs Review → pick a recommendation → filtered findings with evidence →
+Open project / Review field in Jira → admin decides (app never changes Jira).
 
-Project analysis and field analysis emit `findingRecords`; `analyze.js`
-merges them into `report.findings`.
+### Supported Deep Links
 
-### Project Recommendation Rules
+- Open project (`/jira/projects/{key}`)
+- Open project settings (`projectSettingsDetails`)
+- Open custom fields admin
+- Review field (classic ConfigureCustomField with numeric id)
 
-First match wins (`src/admin-health/classify.js`):
+### Remaining Dead Ends
 
-1. Archived → Informational  
-2. Strong archive candidate (High): live + (empty or issues &lt; 5) + (age ≥ 365 or empty with no activity timestamp)  
-3. Review for archive (Review): live + age ≥ 180 + issues &lt; 100  
-4. Investigate inactivity (Review): inactive (≥ 90 days) and not empty; large history (≥ 100 issues) called out in copy  
-5. Review ownership (Review): missing lead  
-6. Review empty project (Review)  
-7. Review low volume (Informational)
+- Next-gen-only field configuration URLs (not faked)
+- No direct “archive project” (intentional — advisory only)
+- Workflows / schemes / screens not analyzed
 
-Never archives or modifies Jira.
+### Current Health Checks
 
-### Custom Field Rules
+Project activity, empty projects, low volume, missing lead, custom-field
+duplicate names, type mismatch within duplicate groups.
 
-- Duplicate: trim / collapse space / lower-case exact name match, group size &gt; 1  
-- Type mismatch: &gt;1 distinct type inside a duplicate group → warning + mixed-type recommendation  
-- Does not claim matching names must be deleted
+### Scoring Rules
 
-### Health Score
+100 − capped: dup groups −3 (max 30), empty −5 (max 25), inactive −4 (max 24),
+missing lead −2 (max 10), low volume −1 (max 5). Clamp 0–100.
 
-Unchanged from v0.1:
+### Configurable Settings
 
-100 − capped costs (dup groups −3/max30, empty −5/max25, inactive −4/max24,
-missing lead −2/max10, low volume −1/max5); clamp 0–100. Deductions listed in UI.
+Inactivity threshold: **90** (default), 180, 365 — KVS `admin-health:settings`.
 
-### Jira APIs Used
+### Jira APIs
 
-| API | Provides |
-|---|---|
-| `GET /rest/api/3/project/search?expand=insight,lead&status=live&status=archived` | Projects, types, lead, issue count, last update |
-| `GET /rest/api/3/field` | System + custom fields |
-
-No per-issue fan-out. No new endpoints in v0.2.
+`GET /rest/api/3/project/search?expand=insight,lead&status=live&status=archived`  
+`GET /rest/api/3/field`
 
 ### Forge Scopes
 
-**None added.** Reuses `read:jira-work`. `storage:app` unchanged (mapping only).
+`read:jira-work`, `storage:app` — no new scopes.
 
-### Responsive UI Changes
+### Performance Assessment
 
-- Section nav: Summary / Projects / Custom fields  
-- Project findings and duplicate groups are stacked cards (mobile-friendly)  
-- Filters via Select (All / Inactive / Empty / Low volume / Missing lead /
-  Strong archive / Review for archive / Investigate inactivity)  
-- Duplicate groups expand to show id + type per field  
-- Desktop remains usable; no wide overflowing tables for hygiene lists
+Project search paginated (50 × ≤40 pages). Single field catalog call. No
+per-issue fan-out. Very large sites (&gt;2000 projects) may truncate; UI surfaces
+limitation. Insight expand remains experimental.
 
-### Tests
+### Test Results
 
 | Check | Result |
 |---|---|
 | `npm run lint:code` | pass |
-| `npm test` | **44** pass |
-| `npm run build` | pass |
+| `npm test` | **47** pass |
+| `npm run build` | (run at deploy) |
+| Live Forge deploy | development **4.7.0** |
 
-Coverage added for classifications, archive-candidate rules, inactivity,
-duplicate normalization, same-type vs mixed-type groups, severities, score
-determinism.
+### Marketplace MVP Gaps
 
-### Product Opportunities Discovered
+**Must fix before submission:** listing screenshots/copy; Get started module;
+verify deep links on customer sites.
 
-1. **Experimental insight** remains the only cheap “last activity” signal —
-   productizing stable last-used would sell if insight stays fragile.  
-2. **Field contexts / unused fields** need per-field fan-out + screens; not
-   viable without careful pagination and scopes.  
-3. **Workflows / schemes / screens** have no single complexity API — a guided
-   complexity map is the natural paid wedge after findings UX matures.  
-4. **Type-mismatched duplicate names** are a concrete admin confusion signal
-   already visible without extra APIs.  
-5. **Archive candidates** as read-only recommendations (v0.2 classifications)
-   fit Marketplace without destructive permissions.
+**Should improve:** export; large-site progress; stronger onboarding.
 
-### Marketplace Readiness Assessment
+**Post-launch:** contexts, unused fields, workflows/schemes.
 
-Biggest remaining gaps before a first Marketplace MVP:
+### Product Value Test
 
-1. Discoverability — Configure deep link / Connected Apps only; onboarding
-   Get started page and clearer app listing still needed  
-2. Depth — no field contexts, unused fields, workflows, or permission schemes  
-3. Trust — insight experimental; need explicit “data freshness / partial load”
-   UX and exportable evidence  
-4. Packaging — scoring + findings UX is promising, but needs polish,
-   empty-state education, and maybe CSV export before selling to admins  
-5. Least privilege story — stay on `read:jira-work` as long as possible;
-   admin-write scopes would raise install friction
+**Yes — within five minutes** an admin can open Overview, see Site Health and
+prioritized recommendations, drill into inactive projects or duplicate fields
+with evidence, and jump into Jira. Value depends on site having real hygiene
+signals; clean sites get clear positive empty states.
 
-### How to open
+### Recommendation
 
-```
-https://one-atlas-qzzp.atlassian.net/jira/settings/apps/configure/c3817645-72ab-47cf-8c1c-a1dff1b69cff/c4313702-63d1-4894-b3ec-b09adfef958f
-```
-
-Or Connected Apps → **atlassian-first-app-test** → **Configure**.
+**Nearly ready** for Marketplace preparation — product core is credible and
+actionable; listing/onboarding assets and broader site verification remain.

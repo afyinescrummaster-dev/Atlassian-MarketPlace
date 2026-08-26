@@ -43,7 +43,7 @@ export const buildRecommendations = ({ fields, projects, findings }) => {
       id: "strong-archive",
       title: `Review ${projects.strongArchiveCandidates} strong archive candidate${projects.strongArchiveCandidates === 1 ? "" : "s"}`,
       summary:
-        "Live projects with no/low issues and no activity for at least a year (or empty with no activity timestamp). Admin Health Lab never archives projects.",
+        "Live projects with no/low issues and no activity for at least a year (or empty with no activity timestamp). Jira Admin Health never archives projects.",
       count: projects.strongArchiveCandidates,
       actionLabel: "View candidates",
       section: "projects",

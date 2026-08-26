@@ -7,6 +7,19 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-26 — Jira Admin Health v0.3 Marketplace UI
+
+### Goal
+Polish existing Admin Health toward Marketplace-ready UX (not a rebuild).
+
+### Done
+- Product name **Jira Admin Health**; overview summary cards; deep links
+- Inactivity threshold setting (90/180/365) in KVS
+- Partial section errors; trust footer; stacked cards
+- Docs + readiness report; 47 tests
+
+---
+
 ## 2026-08-23 — Admin Health Lab v0.2 Findings & Recommendations
 
 ### Goal

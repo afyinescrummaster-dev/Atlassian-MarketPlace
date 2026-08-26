@@ -1,6 +1,12 @@
-/** Admin Health Lab constants, scoring weights, and classification thresholds. */
+/** Jira Admin Health constants, scoring weights, and classification thresholds. */
 
+/** Default inactivity threshold (days). Admins can change to 90 / 180 / 365. */
 export const INACTIVE_DAYS = 90;
+
+export const INACTIVITY_THRESHOLD_OPTIONS = [90, 180, 365];
+
+/** Forge KVS key for Admin Health preferences (site-scoped). */
+export const ADMIN_HEALTH_SETTINGS_KEY = "admin-health:settings";
 
 /** Projects with fewer than this many issues are "low volume" (excluding empty). */
 export const LOW_VOLUME_MAX_ISSUES = 5;
@@ -22,6 +28,14 @@ export const LARGE_ISSUE_HISTORY = 100;
 
 /** Max issues still considered "extremely low" for strong archive. */
 export const STRONG_ARCHIVE_MAX_ISSUES = 5;
+
+export const PRODUCT_NAME = "Jira Admin Health";
+
+export const PRODUCT_TAGLINE =
+  "Find stale projects, possible duplicate fields, and cleanup opportunities across your Jira site.";
+
+export const TRUST_STATEMENT =
+  "Jira Admin Health analyzes configuration and provides recommendations. It does not automatically modify your Jira setup.";
 
 export const PROJECT_TYPE_LABELS = {
   software: "Jira Software",
@@ -63,7 +77,6 @@ export const CLASSIFICATION_LABELS = {
 /**
  * Deterministic score deductions. Each finding type has a per-item cost and a cap.
  * Start at 100, subtract, clamp to [0, 100].
- * Unchanged in v0.2 — findings are the primary value; score remains a summary.
  */
 export const SCORE_RULES = {
   start: 100,
@@ -75,4 +88,17 @@ export const SCORE_RULES = {
 };
 
 export const SCORE_DISCLAIMER =
-  "The score reflects configuration and project hygiene signals currently analyzed by Admin Health Lab. It is an advisory score, not an Atlassian-generated metric.";
+  "Site Health reflects the configuration areas currently analyzed by Jira Admin Health (projects and custom fields). It is an advisory score, not an Atlassian-generated metric.";
+
+export const CURRENT_CHECKS = [
+  "Project activity",
+  "Empty projects",
+  "Project ownership",
+  "Custom field duplication",
+];
+
+export const FUTURE_COVERAGE = [
+  "Workflows and schemes",
+  "Screens and field contexts",
+  "Permission schemes",
+];

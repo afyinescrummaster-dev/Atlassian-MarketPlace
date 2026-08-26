@@ -350,7 +350,7 @@ describe("health score and recommendations", () => {
       ],
     });
 
-    assert.equal(report.version, "0.2");
+    assert.equal(report.version, "0.3");
     assert.equal(report.overview.duplicateFieldGroups, 1);
     assert.equal(report.overview.emptyProjects, 1);
     assert.equal(report.overview.potentiallyInactiveProjects, 1);
@@ -388,5 +388,73 @@ describe("health score and recommendations", () => {
       assert.equal(typeof card.filter, "string");
       assert.equal(typeof card.section, "string");
     }
+  });
+});
+
+describe("navigation helpers", () => {
+  it("builds reliable project and field admin URLs", async () => {
+    const {
+      projectBrowseUrl,
+      customFieldsAdminUrl,
+      customFieldConfigureUrl,
+      numericCustomFieldId,
+      projectSettingsLocation,
+    } = await import("../src/admin-health/navigation.js");
+
+    assert.equal(
+      projectBrowseUrl("https://example.atlassian.net/", "DES"),
+      "https://example.atlassian.net/jira/projects/DES",
+    );
+    assert.equal(
+      customFieldsAdminUrl("https://example.atlassian.net"),
+      "https://example.atlassian.net/jira/settings/issues/custom-fields",
+    );
+    assert.equal(numericCustomFieldId("customfield_10004"), "10004");
+    assert.equal(
+      customFieldConfigureUrl(
+        "https://example.atlassian.net",
+        "customfield_10004",
+      ),
+      "https://example.atlassian.net/secure/admin/ConfigureCustomField!default.jspa?customFieldId=10004",
+    );
+    assert.equal(customFieldConfigureUrl("https://example.atlassian.net", "bad"), null);
+    assert.deepEqual(projectSettingsLocation("DES"), {
+      target: "projectSettingsDetails",
+      projectKey: "DES",
+    });
+  });
+});
+
+describe("inactivity threshold settings", () => {
+  it("normalizes allowed thresholds and defaults invalid values", async () => {
+    const { normalizeInactiveDays, sanitizeSettings } = await import(
+      "../src/admin-health/settings.js"
+    );
+    assert.equal(normalizeInactiveDays(180), 180);
+    assert.equal(normalizeInactiveDays(365), 365);
+    assert.equal(normalizeInactiveDays(12), 90);
+    assert.equal(sanitizeSettings({ inactiveDays: 180 }).inactiveDays, 180);
+  });
+
+  it("recomputes inactive findings when threshold changes", () => {
+    const now = new Date("2026-08-23T12:00:00.000Z");
+    const projects = [
+      {
+        key: "MID",
+        name: "Mid",
+        projectTypeKey: "software",
+        insight: {
+          totalIssueCount: 40,
+          lastIssueUpdateTime: "2026-03-01T00:00:00.000Z",
+        },
+        lead: { accountId: "1" },
+      },
+    ];
+
+    const at90 = buildAdminHealthReport({ now, projects, fields: [], inactiveDays: 90 });
+    const at365 = buildAdminHealthReport({ now, projects, fields: [], inactiveDays: 365 });
+
+    assert.equal(at90.overview.potentiallyInactiveProjects, 1);
+    assert.equal(at365.overview.potentiallyInactiveProjects, 0);
   });
 });

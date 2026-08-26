@@ -1,6 +1,12 @@
 import { route } from "@forge/api";
-import { INACTIVE_DAYS } from "../admin-health/constants.js";
+import { kvs } from "@forge/kvs";
+import { INACTIVE_DAYS, PRODUCT_NAME } from "../admin-health/constants.js";
 import { buildAdminHealthReport } from "../admin-health/analyze.js";
+import {
+  ADMIN_HEALTH_SETTINGS_KEY,
+  normalizeInactiveDays,
+  sanitizeSettings,
+} from "../admin-health/settings.js";
 import { permissionStatus, readJson, requestJira } from "./jira.js";
 
 const PROJECT_PAGE_SIZE = 50;
@@ -13,9 +19,9 @@ const limitations = [
       "Project issue counts and lastIssueUpdateTime come from expand=insight on project/search (documented as experimental by Atlassian).",
   },
   {
-    id: "no-workflow-screens",
+    id: "mvp-scope",
     detail:
-      "v0.2 does not analyze workflows, screens, permission schemes, or field contexts. Findings stay within projects + custom-field names.",
+      "Current checks cover project activity, empty projects, ownership, and custom-field name duplication. Workflows, screens, schemes, and field contexts are future coverage — not missing data.",
   },
   {
     id: "duplicate-rule-simple",
@@ -25,12 +31,12 @@ const limitations = [
   {
     id: "admin-visibility",
     detail:
-      "jira:adminPage Configure is opened from Connected Apps or the /jira/settings/apps/configure/{appId}/{envId} URL. Forge scopes do not grant the Jira admin product role.",
+      "Open Jira Admin Health from Connected Apps → Configure, or the /jira/settings/apps/configure/{appId}/{envId} URL.",
   },
   {
     id: "no-destructive-actions",
     detail:
-      "Admin Health Lab never archives, deletes, or modifies projects or fields. Classifications are advisory only.",
+      "Jira Admin Health never archives, deletes, or modifies projects or fields. Recommendations are advisory only.",
   },
 ];
 
@@ -115,55 +121,127 @@ export const loadAllFields = async () => {
   return { ok: true, fields };
 };
 
+const readSettings = async () => {
+  try {
+    const stored = await kvs.get(ADMIN_HEALTH_SETTINGS_KEY);
+    return sanitizeSettings(stored || {});
+  } catch {
+    return sanitizeSettings({});
+  }
+};
+
 export const registerAdminHealthResolvers = (resolver) => {
-  resolver.define("getAdminHealthReport", async () => {
+  resolver.define("getAdminHealthSettings", async () => {
     try {
+      const settings = await readSettings();
+      return { ok: true, settings };
+    } catch {
+      return { ok: false, error: "unavailable", settings: sanitizeSettings({}) };
+    }
+  });
+
+  resolver.define("setAdminHealthSettings", async ({ payload }) => {
+    try {
+      const settings = sanitizeSettings(payload || {});
+      await kvs.set(ADMIN_HEALTH_SETTINGS_KEY, settings);
+      return { ok: true, settings };
+    } catch {
+      return { ok: false, error: "unavailable" };
+    }
+  });
+
+  resolver.define("getAdminHealthReport", async ({ payload } = {}) => {
+    try {
+      const storedSettings = await readSettings();
+      const inactiveDays = normalizeInactiveDays(
+        payload?.inactiveDays ?? storedSettings.inactiveDays ?? INACTIVE_DAYS,
+      );
+
       const [projectResult, fieldResult] = await Promise.all([
         loadAllProjects(),
         loadAllFields(),
       ]);
 
-      if (!projectResult.ok) {
-        return { ok: false, error: projectResult.error };
-      }
-
-      if (!fieldResult.ok) {
-        return { ok: false, error: fieldResult.error };
+      // Partial success: render whatever we can instead of blanking the dashboard.
+      if (!projectResult.ok && !fieldResult.ok) {
+        return {
+          ok: false,
+          error:
+            projectResult.error === "permission" ||
+            fieldResult.error === "permission"
+              ? "permission"
+              : "unavailable",
+          sectionErrors: {
+            projects: projectResult.error,
+            fields: fieldResult.error,
+          },
+        };
       }
 
       const runtimeLimitations = [...limitations];
-      if (projectResult.truncated) {
+      const sectionErrors = {};
+
+      if (!projectResult.ok) {
+        sectionErrors.projects = projectResult.error;
         runtimeLimitations.push({
-          id: "project-page-cap",
-          detail: `Project listing stopped after ${MAX_PROJECT_PAGES} pages (${PROJECT_PAGE_SIZE} per page). Some projects may be missing.`,
-        });
-      }
-      if (projectResult.partial) {
-        runtimeLimitations.push({
-          id: "project-partial",
+          id: "projects-unavailable",
           detail:
-            "A later project page failed after some projects were loaded. Results may be incomplete.",
+            projectResult.error === "permission"
+              ? "Jira Admin Health could not access project configuration with the current permissions."
+              : "Projects could not be analyzed right now. Other sections may still be available.",
+        });
+      } else {
+        if (projectResult.truncated) {
+          runtimeLimitations.push({
+            id: "project-page-cap",
+            detail: `Project listing stopped after ${MAX_PROJECT_PAGES} pages (${PROJECT_PAGE_SIZE} per page). Some projects may be missing.`,
+          });
+        }
+        if (projectResult.partial) {
+          runtimeLimitations.push({
+            id: "project-partial",
+            detail:
+              "A later project page failed after some projects were loaded. Results may be incomplete.",
+          });
+        }
+      }
+
+      if (!fieldResult.ok) {
+        sectionErrors.fields = fieldResult.error;
+        runtimeLimitations.push({
+          id: "fields-unavailable",
+          detail:
+            fieldResult.error === "permission"
+              ? "Jira Admin Health could not access field configuration with the current permissions."
+              : "Custom fields could not be analyzed right now. Other sections may still be available.",
         });
       }
 
       const report = buildAdminHealthReport({
-        projects: projectResult.projects,
-        fields: fieldResult.fields,
+        projects: projectResult.ok ? projectResult.projects : [],
+        fields: fieldResult.ok ? fieldResult.fields : [],
         now: new Date(),
-        inactiveDays: INACTIVE_DAYS,
+        inactiveDays,
         limitations: runtimeLimitations,
       });
 
       return {
         ok: true,
+        productName: PRODUCT_NAME,
+        settings: { inactiveDays },
+        sectionErrors,
         report: {
           ...report,
           meta: {
-            projectCountLoaded: projectResult.projects.length,
-            fieldCountLoaded: fieldResult.fields.length,
-            truncated: Boolean(projectResult.truncated),
-            partial: Boolean(projectResult.partial),
-            inactiveDays: INACTIVE_DAYS,
+            projectCountLoaded: projectResult.ok
+              ? projectResult.projects.length
+              : 0,
+            fieldCountLoaded: fieldResult.ok ? fieldResult.fields.length : 0,
+            truncated: Boolean(projectResult.ok && projectResult.truncated),
+            partial: Boolean(projectResult.ok && projectResult.partial),
+            inactiveDays,
+            projectsLoaded: Boolean(projectResult.ok),
+            fieldsLoaded: Boolean(fieldResult.ok),
           },
         },
       };

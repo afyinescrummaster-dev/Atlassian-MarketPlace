@@ -29,7 +29,7 @@ modules:
       resolver:
         function: resolver
       render: native
-      title: Admin Health Lab
+      title: Admin Health
       # Surfaces a Configure button on admin.atlassian.com Connected Apps
       # (Jira Settings → Apps now redirects there and hides plain admin pages).
       useAsConfig: true
@@ -55,7 +55,7 @@ app:
 permissions:
   scopes:
     # Browse projects, project search (incl. insight/lead expand), and field catalog.
-    # Used by Project Health, Executive Preview, Issue panel, and Admin Health Lab.
+    # Used by Project Health, Executive Preview, Issue panel, and Jira Admin Health.
     - read:jira-work
-    # Field mapping persistence for Executive Report Preview / Project Health.
+    # Field mapping persistence + Admin Health inactivity threshold preference.
     - storage:app

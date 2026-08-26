@@ -12,12 +12,12 @@ When you finish meaningful work, append a dated entry to both
 `.cursor/session-history.md` and the chat-history section of
 `docs/CHAT-CONTEXT.md`.
 
-## Status (2026-08-23)
+## Status (2026-08-26)
 
-Admin Health Lab **v0.2** (Findings & Recommendations) is in progress on
-`cursor/admin-health-lab-v02-0bfb`. Secrets verified earlier; deploy with:
+**Jira Admin Health v0.3** Marketplace UI polish on
+`cursor/admin-health-marketplace-ui-0bfb`.
 
-1. Safe secrets check in `docs/CHAT-CONTEXT.md` (do not print the token).
+1. Safe secrets check (do not print the token).
 2. `npm run lint:code && npm test && npm run build && forge deploy -e development --non-interactive`
 3. Open Configure deep link or Connected Apps → Configure.
 4. Do not change the registered Forge app ID.

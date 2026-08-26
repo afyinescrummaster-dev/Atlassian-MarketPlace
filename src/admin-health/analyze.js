@@ -41,7 +41,7 @@ export const buildAdminHealthReport = ({
   return {
     generatedAt: now.toISOString(),
     inactiveDays,
-    version: "0.2",
+    version: "0.3",
     overview: {
       totalProjects: projectSummary.total,
       softwareProjects: projectSummary.byType.software,

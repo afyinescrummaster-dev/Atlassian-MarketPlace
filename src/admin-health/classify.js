@@ -40,7 +40,7 @@ export const classifyProjectRecommendation = (project) => {
       label: CLASSIFICATION_LABELS[CLASSIFICATION.ARCHIVED],
       severity: SEVERITY.INFORMATIONAL,
       explanation:
-        "This project is already archived in Jira. No archive action is suggested by Admin Health Lab.",
+        "This project is already archived in Jira. No archive action is suggested by Jira Admin Health.",
     };
   }
 
@@ -64,7 +64,7 @@ export const classifyProjectRecommendation = (project) => {
       code: CLASSIFICATION.STRONG_ARCHIVE,
       label: CLASSIFICATION_LABELS[CLASSIFICATION.STRONG_ARCHIVE],
       severity: SEVERITY.HIGH,
-      explanation: `This live project ${volumeText} ${ageText}. It is a strong candidate to review for archival — Admin Health Lab does not archive projects.`,
+      explanation: `This live project ${volumeText} ${ageText}. It may be an archive candidate — confirm whether the project is still required. Jira Admin Health does not archive projects.`,
     };
   }
 

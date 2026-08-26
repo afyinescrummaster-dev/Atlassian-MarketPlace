@@ -210,7 +210,7 @@ const buildProjectFindingRecords = (project) => {
         },
         recommendation:
           classification?.explanation ||
-          "Review this project with its owners. Admin Health Lab does not change Jira configuration.",
+          "Review this project with its owners. Jira Admin Health does not change Jira configuration.",
         classification: classification?.code || null,
         filterKeys,
       }),

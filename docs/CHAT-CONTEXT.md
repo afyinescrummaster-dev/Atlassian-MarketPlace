@@ -12,7 +12,7 @@ Forge test app `atlassian-first-app-test` for Jira Cloud.
 - Registered app ID (do not change):
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
-- Latest known deploy: development **4.6.0** (Admin Health Lab v0.2)
+- Latest known deploy: development **4.7.0** (Jira Admin Health v0.3)
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -24,7 +24,7 @@ Forge test app `atlassian-first-app-test` for Jira Cloud.
    `src/frontend/project-report.jsx`
 3. **Executive Report Preview** — `jira:projectSettingsPage`, Custom UI,
    `static/executive-preview/`
-4. **Admin Health Lab** — `jira:adminPage`, UI Kit,
+4. **Jira Admin Health** — `jira:adminPage` (Configure), UI Kit,
    `src/frontend/admin-health.jsx` (see `docs/ADMIN-HEALTH-LAB.md`)
 
 Forge allows only one `jira:projectPage`. The executive preview stays under
@@ -179,6 +179,13 @@ Built **Findings & Recommendations** on top of v0.1 without replacing it:
 - Actionable recommendation drill-downs + stacked responsive cards
 - Docs: `docs/ADMIN-HEALTH-LAB.md`, `docs/ADMIN-HEALTH-LAB-REPORT.md`
 - Tests: 44 passing; no new Forge scopes
+
+### 2026-08-26 — Jira Admin Health v0.3 Marketplace UI
+
+Polished existing Admin Health toward Marketplace quality without expanding
+scope: product naming, overview cards, deep links, inactivity threshold (KVS),
+partial errors, trust copy. Branch
+`cursor/admin-health-marketplace-ui-0bfb`.
 
 ## Secrets for mobile and Cloud Agents
 

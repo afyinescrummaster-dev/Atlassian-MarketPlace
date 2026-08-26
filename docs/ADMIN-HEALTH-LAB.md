@@ -1,150 +1,137 @@
-# Admin Health Lab — technical notes
+# Jira Admin Health — technical notes
+
+Customer-facing product name: **Jira Admin Health**  
+Internal module key remains `admin-health-lab-page` (Forge app ID unchanged).
 
 ## Versions
 
 - **v0.1** — Site overview, hygiene flags, score, recommendation cards
-- **v0.2** — Findings model, classifications, actionable drill-downs, responsive cards
+- **v0.2** — Findings model, classifications, drill-downs, responsive cards
+- **v0.3** — Marketplace UI polish: product naming, summary cards, deep links,
+  inactivity threshold setting, partial section errors, trust language
 
-v0.2 preserves all v0.1 data retrieval. It does **not** replace the admin page.
+## Current product
 
-## What was built (v0.2)
+Read-only Jira administration health / cleanup assistant.
 
-- Consistent **findings** records (`src/admin-health/findings.js`) for Projects and Custom Fields
-- Deterministic **project recommendation classifications** (`src/admin-health/classify.js`)
-- Expandable **duplicate custom-field groups** with type-mismatch highlighting
-- Landing summary: Site Health score + findings by severity + category summaries
-- Recommendation cards navigate to filtered Project / Custom Field views
-- Stacked project and field **cards** (better on narrow screens than wide tables)
-- Unit tests in `test/admin-health.test.js`
+**Promise:** Find Jira cleanup opportunities in minutes.  
+**Workflow:** Detect → Explain → Prioritize → Navigate to Fix
+
+Checks today:
+
+- Project activity (inactive threshold; default **90** days, configurable 90/180/365)
+- Empty projects
+- Low-volume projects
+- Missing project lead (when Jira returns lead expand data)
+- Custom field duplicate names (+ type mismatch within a group)
+- Deterministic Site Health score
+
+Does **not** modify Jira. Does **not** archive, delete, or bulk-update.
 
 ## Findings architecture
 
-A finding is a plain object:
+`createFinding` / `summarizeFindings` in `src/admin-health/findings.js`.
 
 | Field | Purpose |
 |---|---|
-| `id` | Stable id (`project:KEY:code` or `field-dup:normalized`) |
+| `id` | Stable id |
 | `category` | `Projects` or `Custom Fields` |
 | `title` | Short label |
 | `severity` | `High` · `Review` · `Informational` |
-| `affectedObject` | Key/name/type of the Jira object |
-| `reason` | Why it was flagged |
-| `evidence` | Counts, ages, field lists, etc. |
-| `recommendation` | Advisory next step (never destructive) |
+| `affectedObject` | Key/name/type |
+| `reason` | Why flagged |
+| `evidence` | Counts, ages, field lists |
+| `recommendation` | Advisory next step |
 | `classification` | Optional recommendation code |
-| `filterKeys` | Keys used by UI filters |
+| `filterKeys` | UI filter keys |
 
-New checks should emit findings through `createFinding` and append to the
-category’s `findingRecords`. `summarizeFindings` builds totals by severity.
+## Project recommendation rules
 
-## Project recommendation rules (exact)
+First match wins (`classify.js`):
 
-Evaluated in order; first match wins (`classifyProjectRecommendation`):
-
-1. **Archived** → Informational  
-   Project is already archived.
-
-2. **Strong archive candidate** → High  
-   - Live (not archived)  
-   - Empty **or** issue count `< 5`  
-   - **And** (days since last issue activity `≥ 365` **or** empty with no activity timestamp)
-
-3. **Review for archive** → Review  
-   - Live  
-   - Days since activity `≥ 180`  
-   - Issue count known and `< 100`
-
-4. **Investigate inactivity** → Review  
-   - Inactive (`≥ 90` days since last issue update) and not empty  
-   - If issue count `≥ 100`, explanation emphasizes large history
-
-5. **Review ownership** → Review  
-   - Missing project lead on a live project
-
-6. **Review empty project** → Review  
-   - Empty but not classified as strong archive
-
-7. **Review low volume** → Informational  
-   - `0 < issues < 5` only
-
-Admin Health Lab **never** archives, deletes, or modifies projects.
+1. Archived → Informational  
+2. Strong archive candidate (High): live + (empty or issues &lt; 5) + (age ≥ 365 or empty with no activity timestamp)  
+3. Review for archive (Review): live + age ≥ 180 + issues &lt; 100  
+4. Investigate inactivity (Review): inactive (≥ threshold) and not empty  
+5. Review ownership (Review): missing lead  
+6. Review empty / low volume fallbacks  
 
 ## Custom field rules
 
-- **Duplicate name**: custom fields whose names match after trim + collapse
-  whitespace + lower-case, group size `> 1`
-- **Type mismatch**: within a duplicate group, more than one distinct field type
-  → highlight “Different field types detected”
-- Recommendation language confirms purpose; **does not** claim fields should be deleted
+- Duplicate: trim / collapse space / lower-case exact name; group size &gt; 1  
+- Type mismatch: &gt;1 type in a group → warning  
+- Does not claim matching names must be deleted  
 
 ## Health score
 
-Unchanged from v0.1 (findings are the primary value):
+Unchanged formula: start 100; subtract capped costs (dup −3/max30, empty −5/max25,
+inactive −4/max24, missing lead −2/max10, low volume −1/max5); clamp 0–100.
 
-Start **100**. Subtract (each capped):
+UI presents score + “Why?” chips + expandable calculation details.
 
-- Duplicate field groups: −3 each (max −30)
-- Empty projects: −5 each (max −25)
-- Inactive projects: −4 each (max −24)
-- Missing leads: −2 each (max −10)
-- Low-volume projects: −1 each (max −5)
+## Configurable settings
 
-Clamp to `[0, 100]`. UI still lists each deduction line.
+| Setting | Values | Storage |
+|---|---|---|
+| Inactivity threshold | 90 (default), 180, 365 | Forge KVS `admin-health:settings` via `storage:app` |
 
-## Jira APIs used
+Changing the threshold reloads analysis so counts, findings, recommendations, and score stay consistent.
+
+## Supported deep links
+
+Centralized in `src/admin-health/navigation.js`:
+
+| Action | Target | Reliable? |
+|---|---|---|
+| Open project | `{siteUrl}/jira/projects/{key}` | Yes |
+| Open project settings | Forge `NavigationTarget.projectSettingsDetails` | Yes |
+| Open custom fields | `{siteUrl}/jira/settings/issues/custom-fields` | Yes |
+| Review field | Classic `ConfigureCustomField!default.jspa?customFieldId={n}` | Yes for `customfield_NNNNN` |
+
+Not faked: next-gen-only field config URLs, workflow/scheme/screen admin links.
+
+## Jira APIs
 
 | API | Purpose |
 |---|---|
-| `GET /rest/api/3/project/search?expand=insight,lead&status=live&status=archived` | Projects; type; lead; `totalIssueCount`; `lastIssueUpdateTime` |
-| `GET /rest/api/3/field` | System + custom field catalog |
+| `GET /rest/api/3/project/search?expand=insight,lead&status=live&status=archived` | Projects + activity + lead |
+| `GET /rest/api/3/field` | System + custom fields |
 
-No issue-level fan-out. No new endpoints in v0.2.
+No per-issue fan-out. Pagination: 50/page, max 40 pages.
 
 ## Forge scopes
-
-No new scopes.
 
 | Scope | Why |
 |---|---|
 | `read:jira-work` | Project search + field catalog |
-| `storage:app` | Unchanged; field mapping only (not used by Admin Health Lab) |
+| `storage:app` | Field mapping (existing) + Admin Health inactivity setting |
 
-## Responsive UI
+No new scopes in v0.3.
 
-- Summary / Projects / Custom fields section navigation
-- Project findings and duplicate groups render as **stacked cards** (readable on
-  narrow screens; still usable on desktop)
-- Filters use `Select` instead of dense button rows
-- Duplicate groups expand to show field id + type without a wide multi-column table
+## UI structure (v0.3)
 
-## Open Admin Health Lab
+- Header: product name, tagline, last analyzed, Re-run analysis  
+- Nav: Overview · Projects · Custom fields · Settings  
+- Overview: Site Health / Needs Review / Analyzed cards, Why score chips, Recommended review, module previews  
+- Projects: counters, filters, stacked finding cards with Open project / settings  
+- Custom fields: expandable duplicate groups with Review field  
+- Settings: inactivity threshold  
+- Trust footer  
 
-Development deep link (Configure page):
+Loading / section errors / positive empty states included. Partial API failure keeps successful sections visible.
 
-`https://one-atlas-qzzp.atlassian.net/jira/settings/apps/configure/{appId}/{envId}`
+## Open the app
 
-Or Connected Apps → **atlassian-first-app-test** → **Configure**.
+```
+https://one-atlas-qzzp.atlassian.net/jira/settings/apps/configure/c3817645-72ab-47cf-8c1c-a1dff1b69cff/c4313702-63d1-4894-b3ec-b09adfef958f
+```
 
-## Product discovery notes (API friction)
+Or Connected Apps → app → **Configure**.
 
-See also `docs/ADMIN-HEALTH-LAB-REPORT.md` for the v0.2 final report.
+## Marketplace gaps (honest)
 
-| Area | API sketch | Limitation | Likely scopes | Marketplace note |
-|---|---|---|---|---|
-| Custom field contexts | `/rest/api/3/field/{id}/context` | Per-field fan-out; slow on large catalogs | `read:jira-work` or manage fields | Unused-field detection needs contexts + screens |
-| Unused custom fields | contexts + screens + issue search | Expensive; false positives without issue samples | Possibly `read:jira-work` | High admin pain if done safely |
-| Workflows / schemes | `/rest/api/3/workflowscheme`, `/workflow` | Many calls; complex graphs | manage workflows / classic admin | Config complexity map is a natural wedge |
-| Screens / screen schemes | `/rest/api/3/screens`, screen schemes | Fan-out; naming only without field usage | admin scopes | Pairs with unused-field story |
-| Issue type schemes | `/rest/api/3/issuetypescheme` | Site-wide vs project mapping | `read:jira-work` / admin | Useful for sprawl reports |
-| Permission schemes | `/rest/api/3/permissionscheme` | Sensitive; hard to summarize | admin | Trust + least privilege required |
-| Status proliferation | statuses + workflows | Statuses alone lack project usage | `read:jira-work` | Combine with inactive projects |
-| Archive candidates | project `insight` (experimental) | Insight may change; no boards/empty check cheaply | `read:jira-work` | v0.2 classifications are the read-only wedge |
-| Config complexity | no single API | Must compose many endpoints | several admin scopes | Biggest long-term product opportunity |
+**Must fix before submission:** polished Marketplace listing assets; confirm deep links on target Cloud sites; install/onboarding Get started page.
 
-## Limitations
+**Should improve:** CSV export of findings; stronger empty-state education; scan progress messaging on very large sites.
 
-- `expand=insight` is experimental
-- No workflows, screens, schemes, field contexts, automation in v0.2
-- Duplicate detection is exact normalized-name only (no fuzzy match)
-- Configure/`useAsConfig` page — not listed as a Connected Apps row by itself
-- Deleted projects omitted (`status=deleted` not requested)
+**Post-launch:** field contexts / unused fields, workflows/schemes complexity, scheduled scans — not MVP.
