@@ -8,3 +8,6 @@ static/executive-preview/build
 static/executive-preview/node_modules
 static/admin-health/build
 static/admin-health/node_modules
+apps/delivery-intelligence/node_modules
+apps/delivery-intelligence/static/dashboard/build
+apps/delivery-intelligence/static/dashboard/node_modules

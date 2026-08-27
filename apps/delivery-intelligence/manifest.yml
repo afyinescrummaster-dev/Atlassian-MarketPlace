@@ -1,0 +1,106 @@
+modules:
+  jira:projectPage:
+    - key: delivery-intelligence-dashboard
+      resource: dashboard
+      resolver:
+        function: resolver
+      title: Delivery Intelligence
+      layout: blank
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+  rovo:agent:
+    - key: delivery-intelligence-agent
+      name: Delivery Intelligence
+      description: Explains sprint health, prioritizes delivery risks, and drafts leadership summaries from deterministic sprint facts.
+      prompt: resource:agent-prompts;delivery-agent.txt
+      conversationStarters:
+        - Explain this sprint's top risks
+        - What should the team address first?
+        - Draft a leadership brief
+      actions:
+        - get-sprint-health-snapshot
+        - get-issue-delivery-context
+        - get-scope-changes
+        - get-carryover-history
+  action:
+    - key: get-sprint-health-snapshot
+      name: Get sprint health snapshot
+      function: getSprintHealthSnapshot
+      actionVerb: GET
+      description: Returns the precomputed sprint health score, KPI metrics, and top anomalies for the active sprint.
+      inputs:
+        projectKey:
+          title: Project key
+          type: string
+          required: true
+          description: Jira project key, for example PAY.
+        boardId:
+          title: Board id
+          type: string
+          required: false
+          description: Optional Jira board id when multiple boards exist.
+    - key: get-issue-delivery-context
+      name: Get issue delivery context
+      function: getIssueDeliveryContext
+      actionVerb: GET
+      description: Returns one issue from the active sprint plus sprint summary context.
+      inputs:
+        projectKey:
+          title: Project key
+          type: string
+          required: true
+          description: Jira project key.
+        issueKey:
+          title: Issue key
+          type: string
+          required: false
+          description: Optional issue key such as PAY-244.
+    - key: get-scope-changes
+      name: Get scope changes
+      function: getScopeChanges
+      actionVerb: GET
+      description: Returns issues added to the sprint after sprint start and scope change percentage.
+      inputs:
+        projectKey:
+          title: Project key
+          type: string
+          required: true
+          description: Jira project key.
+    - key: get-carryover-history
+      name: Get carryover history
+      function: getCarryoverHistory
+      actionVerb: GET
+      description: Returns carryover count and issue keys when sprint changelog history is available.
+      inputs:
+        projectKey:
+          title: Project key
+          type: string
+          required: true
+          description: Jira project key.
+  function:
+    - key: resolver
+      handler: index.handler
+    - key: getSprintHealthSnapshot
+      handler: index.getSprintHealthSnapshot
+    - key: getIssueDeliveryContext
+      handler: index.getIssueDeliveryContext
+    - key: getScopeChanges
+      handler: index.getScopeChanges
+    - key: getCarryoverHistory
+      handler: index.getCarryoverHistory
+resources:
+  - key: dashboard
+    path: static/dashboard/build
+  - key: agent-prompts
+    path: resources/agent-prompts
+app:
+  runtime:
+    name: nodejs22.x
+    memoryMB: 256
+    architecture: arm64
+  # Register this app before deploy:
+  # cd apps/delivery-intelligence && forge register "Delivery Intelligence for Jira"
+  # Forge will write a real app.id into this manifest. Do not reuse the Admin Health app ID.
+permissions:
+  scopes:
+    - read:jira-work
+    - read:sprint:jira-software

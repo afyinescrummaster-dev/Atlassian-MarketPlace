@@ -6,9 +6,12 @@
   "main": "index.js",
   "scripts": {
     "lint": "forge lint",
-    "lint:code": "eslint src test static/executive-preview/src static/admin-health/src",
-    "test": "node --test test/*.test.js",
+    "lint:code": "eslint src test static/executive-preview/src static/admin-health/src apps/delivery-intelligence/src apps/delivery-intelligence/static/dashboard/src",
+    "test": "node --test test/*.test.js && npm run test --prefix apps/delivery-intelligence",
+    "test:legacy": "node --test test/*.test.js",
+    "test:delivery-intelligence": "npm run test --prefix apps/delivery-intelligence",
     "build": "npm run build --prefix static/executive-preview && npm run build --prefix static/admin-health",
+    "build:delivery-intelligence": "npm run build --prefix apps/delivery-intelligence",
     "validate": "forge lint && forge deploy --dry-run"
   },
   "dependencies": {

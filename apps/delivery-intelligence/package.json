@@ -1,0 +1,24 @@
+{
+  "name": "delivery-intelligence-for-jira",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Delivery Intelligence for Jira — sprint health dashboard and Rovo agent (read-only MVP).",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "lint:code": "eslint src test static/dashboard/src",
+    "test": "node --test test/*.test.js",
+    "build:dashboard": "npm run build --prefix static/dashboard",
+    "build": "npm run build:dashboard",
+    "validate": "npm run build && forge lint"
+  },
+  "dependencies": {
+    "@atlassian-marketplace/shared-jira": "file:../../packages/shared-jira",
+    "@forge/api": "^8.0.4",
+    "@forge/resolver": "^2.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1"
+  }
+}

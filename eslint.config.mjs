@@ -30,7 +30,11 @@ export default [
     },
   },
   {
-    files: ["static/executive-preview/src/**/*.{js,jsx}", "static/admin-health/src/**/*.{js,jsx}"],
+    files: [
+      "static/executive-preview/src/**/*.{js,jsx}",
+      "static/admin-health/src/**/*.{js,jsx}",
+      "apps/delivery-intelligence/static/dashboard/src/**/*.{js,jsx}",
+    ],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -49,6 +53,13 @@ export default [
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+    },
+  },
+  {
+    files: ["apps/delivery-intelligence/src/**/*.js", "apps/delivery-intelligence/test/**/*.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
     },
   },
   {

@@ -7,7 +7,12 @@ Last updated: 2026-08-27
 
 ## What this repo is
 
-Forge test app `atlassian-first-app-test` for Jira Cloud.
+Monorepo for Atlassian Forge Marketplace products:
+
+1. **Legacy Forge app** `atlassian-first-app-test` — root `manifest.yml`
+2. **Delivery Intelligence for Jira** — separate app under `apps/delivery-intelligence/`
+
+See **`docs/PRODUCT-INDEX.md`** before editing.
 
 - Registered app ID (do not change):
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
@@ -270,5 +275,7 @@ Upgrade the install only if Forge says a new scope is required.
 
 - `docs/MULTI-APP-REPO-STRATEGY.md` — managing multiple products/modules in
   one repo without losing context
+- `docs/PRODUCT-INDEX.md` — agent routing table per product
+- `docs/products/delivery-intelligence.md` — new Marketplace app (v0.1)
 - `docs/ADMIN-HEALTH-LAB.md` — Jira Admin Health product detail
 - `docs/ROVO-DELIVERY-INTELLIGENCE-ARCHITECTURE.md` — future product research

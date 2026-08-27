@@ -7,7 +7,21 @@ Update this file at the end of meaningful sessions.
 
 ---
 
-## 2026-08-27 — Jira Admin Health v0.4 boxed Custom UI
+## 2026-08-27 — [Delivery Intelligence] v0.1 monorepo foundation
+
+### Goal
+Approve multi-app monorepo direction; scaffold separate Delivery Intelligence Forge app.
+
+### Done
+- `apps/delivery-intelligence/` with domain engine, Agile client, Custom UI, Rovo agent/actions
+- `packages/shared-jira/` shared read helpers
+- `docs/products/` + `docs/PRODUCT-INDEX.md`
+- Unit tests for deterministic engine; legacy root app untouched
+- Manual `forge register` documented (non-TTY blocked registration here)
+
+---
+
+## 2026-08-27 — [Admin Health] v0.4 boxed Custom UI
 
 ### Goal
 Match Cleanup Control Center mockup more closely (sidebar + box format).

@@ -1,0 +1,10 @@
+{
+  "name": "@atlassian-marketplace/shared-jira",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared read-only Jira request helpers for Forge apps in this monorepo.",
+  "exports": {
+    ".": "./index.js"
+  }
+}
