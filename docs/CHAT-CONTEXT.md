@@ -265,3 +265,10 @@ Upgrade the install only if Forge says a new scope is required.
 - Do not change the registered Forge app ID
 - Do not commit `.env` or tokens
 - Do not print `FORGE_API_TOKEN` or ask the user to paste it into chat
+
+## Related docs
+
+- `docs/MULTI-APP-REPO-STRATEGY.md` — managing multiple products/modules in
+  one repo without losing context
+- `docs/ADMIN-HEALTH-LAB.md` — Jira Admin Health product detail
+- `docs/ROVO-DELIVERY-INTELLIGENCE-ARCHITECTURE.md` — future product research

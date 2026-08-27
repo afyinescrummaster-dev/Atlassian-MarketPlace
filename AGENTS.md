@@ -3,7 +3,8 @@
 Before starting work, read these in order:
 
 1. **`docs/CHAT-CONTEXT.md`** — full product, Forge, secrets, and chat handoff
-2. **`.cursor/session-history.md`** — short dated session log for this Cloud Agent thread
+2. **`docs/MULTI-APP-REPO-STRATEGY.md`** — multi-product repo layout and context strategy
+3. **`.cursor/session-history.md`** — short dated session log for this Cloud Agent thread
 
 New Cloud Agent runs do **not** inherit prior Cursor chat UI transcripts.
 Those two files are the durable memory.
