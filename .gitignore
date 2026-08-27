@@ -6,3 +6,5 @@ node_modules/
 npm-debug.log*
 static/executive-preview/build
 static/executive-preview/node_modules
+static/admin-health/build
+static/admin-health/node_modules

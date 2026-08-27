@@ -6,9 +6,9 @@
   "main": "index.js",
   "scripts": {
     "lint": "forge lint",
-    "lint:code": "eslint src test static/executive-preview/src",
+    "lint:code": "eslint src test static/executive-preview/src static/admin-health/src",
     "test": "node --test test/*.test.js",
-    "build": "npm run build --prefix static/executive-preview",
+    "build": "npm run build --prefix static/executive-preview && npm run build --prefix static/admin-health",
     "validate": "forge lint && forge deploy --dry-run"
   },
   "dependencies": {

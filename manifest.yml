@@ -28,8 +28,8 @@ modules:
       resource: admin-health
       resolver:
         function: resolver
-      render: native
       title: Admin Health
+      layout: blank
       # Surfaces a Configure button on admin.atlassian.com Connected Apps
       # (Jira Settings → Apps now redirects there and hides plain admin pages).
       useAsConfig: true
@@ -45,7 +45,7 @@ resources:
   - key: executive-preview
     path: static/executive-preview/build
   - key: admin-health
-    path: src/frontend/admin-health.jsx
+    path: static/admin-health/build
 app:
   runtime:
     name: nodejs22.x

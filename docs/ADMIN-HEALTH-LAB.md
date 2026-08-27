@@ -9,6 +9,8 @@ Internal module key remains `admin-health-lab-page` (Forge app ID unchanged).
 - **v0.2** — Findings model, classifications, drill-downs, responsive cards
 - **v0.3** — Marketplace UI polish: product naming, summary cards, deep links,
   inactivity threshold setting, partial section errors, trust language
+- **v0.4** — Cleanup Control Center Custom UI: sidebar + boxed modules matching
+  the design mockup (`static/admin-health/`)
 
 ## Current product
 

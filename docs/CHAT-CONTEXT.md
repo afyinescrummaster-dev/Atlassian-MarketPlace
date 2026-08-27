@@ -3,7 +3,7 @@
 This file is the handoff for Cursor mobile or a remote agent. Read it before
 changing the Forge app. Do not invent missing Jira fields or sample metrics.
 
-Last updated: 2026-08-23
+Last updated: 2026-08-27
 
 ## What this repo is
 
@@ -12,7 +12,7 @@ Forge test app `atlassian-first-app-test` for Jira Cloud.
 - Registered app ID (do not change):
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
-- Latest known deploy: development **4.7.0** (Jira Admin Health v0.3)
+- Latest known deploy: development **4.7.0** (Jira Admin Health v0.3; v0.4 boxed UI pending deploy on this branch)
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -24,8 +24,9 @@ Forge test app `atlassian-first-app-test` for Jira Cloud.
    `src/frontend/project-report.jsx`
 3. **Executive Report Preview** — `jira:projectSettingsPage`, Custom UI,
    `static/executive-preview/`
-4. **Jira Admin Health** — `jira:adminPage` (Configure), UI Kit,
-   `src/frontend/admin-health.jsx` (see `docs/ADMIN-HEALTH-LAB.md`)
+4. **Jira Admin Health** — `jira:adminPage` (Configure), Custom UI boxed
+   dashboard, `static/admin-health/` (see `docs/ADMIN-HEALTH-LAB.md`).
+   Legacy UI Kit entry `src/frontend/admin-health.jsx` is unused.
 
 Forge allows only one `jira:projectPage`. The executive preview stays under
 Project settings. Preserve its visual design (navy header, KPI strip, donut,
@@ -186,6 +187,13 @@ Polished existing Admin Health toward Marketplace quality without expanding
 scope: product naming, overview cards, deep links, inactivity threshold (KVS),
 partial errors, trust copy. Branch
 `cursor/admin-health-marketplace-ui-0bfb`.
+
+### 2026-08-27 — Jira Admin Health v0.4 Cleanup Control Center boxes
+
+Converted Admin Health to Custom UI (`static/admin-health/`) to match the
+mockup box layout: sidebar, equal summary cards, why-score chips,
+recommended review cards, boxed Project / Custom Field modules with tables.
+Branch `cursor/admin-health-box-ui-0bfb`.
 
 ## Secrets for mobile and Cloud Agents
 

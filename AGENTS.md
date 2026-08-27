@@ -12,10 +12,10 @@ When you finish meaningful work, append a dated entry to both
 `.cursor/session-history.md` and the chat-history section of
 `docs/CHAT-CONTEXT.md`.
 
-## Status (2026-08-26)
+## Status (2026-08-27)
 
-**Jira Admin Health v0.3** Marketplace UI polish on
-`cursor/admin-health-marketplace-ui-0bfb`.
+**Jira Admin Health v0.4** Cleanup Control Center Custom UI (boxed layout) on
+`cursor/admin-health-box-ui-0bfb`.
 
 1. Safe secrets check (do not print the token).
 2. `npm run lint:code && npm test && npm run build && forge deploy -e development --non-interactive`

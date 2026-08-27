@@ -7,6 +7,20 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-27 — Jira Admin Health v0.4 boxed Custom UI
+
+### Goal
+Match Cleanup Control Center mockup more closely (sidebar + box format).
+
+### Done
+- Moved Admin Health from UI Kit to Custom UI (`static/admin-health/`)
+- Sidebar, equal summary cards, why-score chips, recommendation cards
+- Boxed Project / Custom Field hygiene modules with tables on overview
+- Manifest `layout: blank` + resource points at Vite build
+- Docs updated; lint/tests/build green
+
+---
+
 ## 2026-08-26 — Jira Admin Health v0.3 Marketplace UI
 
 ### Goal

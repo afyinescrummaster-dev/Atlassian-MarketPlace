@@ -30,7 +30,7 @@ export default [
     },
   },
   {
-    files: ["static/executive-preview/src/**/*.{js,jsx}"],
+    files: ["static/executive-preview/src/**/*.{js,jsx}", "static/admin-health/src/**/*.{js,jsx}"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
