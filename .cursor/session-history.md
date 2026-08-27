@@ -18,6 +18,7 @@ Match Cleanup Control Center mockup more closely (sidebar + box format).
 - Boxed Project / Custom Field hygiene modules with tables on overview
 - Manifest `layout: blank` + resource points at Vite build
 - Docs updated; lint/tests/build green
+- Deployed development **4.8.0**
 
 ---
 

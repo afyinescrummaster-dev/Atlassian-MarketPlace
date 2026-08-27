@@ -12,7 +12,7 @@ Forge test app `atlassian-first-app-test` for Jira Cloud.
 - Registered app ID (do not change):
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
-- Latest known deploy: development **4.7.0** (Jira Admin Health v0.3; v0.4 boxed UI pending deploy on this branch)
+- Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
