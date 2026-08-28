@@ -3,7 +3,13 @@
 Working product name: **Delivery Intelligence for Jira**  
 Version: **0.1.0** (read-only MVP)  
 Forge app location: `apps/delivery-intelligence/`  
-Status: **Separate Forge app** — requires manual registration before first deploy
+Status: **Registered and installed** on demo site (development **2.0.0**)
+
+Forge app ID:
+
+`ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026`
+
+Demo site: `https://one-atlas-qzzp.atlassian.net` — open any Jira Software project → **Delivery Intelligence** project page.
 
 ---
 
