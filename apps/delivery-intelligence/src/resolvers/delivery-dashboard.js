@@ -32,6 +32,15 @@ export const buildSnapshotForProject = async ({
         carryoverCount: null,
         blockedCount: null,
         staleCount: null,
+        originalCommittedIssues: [],
+        addedIssues: [],
+        blockedIssues: [],
+        carryoverIssues: [],
+        staleIssues: [],
+        previousSprint: null,
+        previousSprintMetrics: null,
+        metricDeltas: null,
+        comparison: null,
         topAnomalies: [],
         limitations: loaded.limitations,
       },
@@ -45,6 +54,7 @@ export const buildSnapshotForProject = async ({
       issues: loaded.issues,
       changelogsByKey: loaded.changelogsByKey,
       previousSprint: loaded.previousSprint,
+      previousSprintContext: loaded.previousSprintContext,
       now,
     });
 

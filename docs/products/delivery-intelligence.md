@@ -3,11 +3,13 @@
 Working product name: **Delivery Intelligence for Jira**  
 Version: **1.0.0** — Sprint Health + Rovo Intelligence  
 Forge app location: `apps/delivery-intelligence/`  
-Status: **V1 milestone `di-v1.0.0`** @ `c780ff5`. Live Forge
-development **2.15.0** (UI Build still `2.8.0`). Historical recovered
-known-good remains `di-v0.1.1` @ `4f44eb3` — do not delete.
-See `docs/RECOVERY-2.8.0.md`. Working rules: `AGENTS.md`.
-Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
+Status: **V1 milestone `di-v1.0.0`** @ `c780ff5`. Next increment
+(features 1–5: Scope Movement, attention items, drill-downs, current vs
+previous sprint, distinct Rovo intents) is on
+`feature/sprint-intelligence-core`. Do not merge until live Jira
+acceptance. Historical recovered known-good remains `di-v0.1.1` @
+`4f44eb3` — do not delete. See `docs/RECOVERY-2.8.0.md`. Working rules:
+`AGENTS.md`. Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
 
 Forge app ID:
 
@@ -191,12 +193,19 @@ Implementation: `src/delivery-intelligence/score.js`
 
 - `healthScore`, `healthStatus`, `healthMax`
 - `originalCommittedCount`, `currentIssueCount`, `addedIssueCount`, `scopeChangePercent`
-- `completionPercent`, `scopeChangePercent`
-- `addedIssueCount`, `carryoverCount`, `blockedCount`, `staleCount`
-- `topAnomalies[]` (ranked list)
+- `originalCommittedIssueKeys` / `originalCommittedIssues`
+- `addedIssueKeys` / `addedIssues`
+- `removedIssueCount` is null until removal history is trustworthy
+- `completionPercent`, `doneIssues`, `openIssues`
+- `carryoverCount`, `carryoverIssueKeys`, `carryoverIssues`
+- `blockedCount`, `blockedIssues`
+- `staleCount`, `staleIssues`
+- `topAnomalies[]` (severity, explanation, evidence, suggested action, drill-down)
+- `previousSprint`, `previousSprintMetrics`, `metricDeltas`, `comparison`
 - `context` (project, board)
 - `sprint` (id, name, dates)
-- `capabilities`, `limitations`
+- `capabilities` (`scopeChange`, `carryover`, `scopeRemovals`, `comparison`)
+- `limitations`
 
 ---
 
@@ -207,9 +216,10 @@ Implementation: `src/delivery-intelligence/score.js`
 - Must treat action output and user FACTS as quantitative truth
 - Must not claim Jira was modified
 - Conversation starters:
-  - Explain this sprint's top risks
-  - What should the team address first?
-  - Draft a leadership brief
+  - Explain this sprint's delivery risks.
+  - Recommend the highest-priority actions for this sprint.
+  - Generate a concise leadership brief for this sprint.
+- Visible user prompts stay natural language. Do not put raw JSON or FACTS blocks in the Rovo open prompt.
 
 ---
 
@@ -290,7 +300,7 @@ forge lint
 2. Navigate to **Apps → Delivery Intelligence** project page (after install).
 3. Confirm KPI cards match sprint data.
 4. Confirm dashboard loads with Rovo **not** invoked.
-5. Click **Explain sprint** — Rovo sidebar opens with FACTS prompt.
+5. Click **Explain sprint** — Rovo sidebar opens with a natural-language prompt. No raw JSON.
 6. Confirm legacy Admin Health Configure link still works (root app unchanged).
 
 ---

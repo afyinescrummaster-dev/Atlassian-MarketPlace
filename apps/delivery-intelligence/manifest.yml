@@ -14,9 +14,9 @@ modules:
         leadership summaries from deterministic sprint facts.
       prompt: resource:agent-prompts;delivery-agent.txt
       conversationStarters:
-        - Explain this sprint's top risks
-        - What should the team address first?
-        - Draft a leadership brief
+        - Explain this sprint's delivery risks.
+        - Recommend the highest-priority actions for this sprint.
+        - Generate a concise leadership brief for this sprint.
       actions:
         - get-sprint-health-snapshot
         - get-issue-delivery-context

@@ -53,6 +53,7 @@ const emptyContext = (projectKey, limitations, board = null) => ({
   issues: [],
   changelogsByKey: {},
   previousSprint: null,
+  previousSprintContext: null,
   limitations,
 });
 
@@ -217,7 +218,15 @@ export const fetchPreviousClosedSprint = async (boardId, beforeIso) => {
         continue;
       }
       if (!best || endedMs > best.endedMs) {
-        best = { id: row.id, name: row.name, endedMs };
+        best = {
+          id: row.id,
+          name: row.name,
+          endedMs,
+          startDate: row.startDate || null,
+          completeDate: row.completeDate || null,
+          endDate: row.endDate || null,
+          activatedDate: row.activatedDate || null,
+        };
       }
     }
 
@@ -230,7 +239,16 @@ export const fetchPreviousClosedSprint = async (boardId, beforeIso) => {
     }
   }
 
-  const sprint = best ? { id: best.id, name: best.name } : null;
+  const sprint = best
+    ? {
+        id: best.id,
+        name: best.name,
+        startDate: best.startDate,
+        completeDate: best.completeDate,
+        endDate: best.endDate,
+        activatedDate: best.activatedDate,
+      }
+    : null;
   logEvidence("previous-sprint", { boardId, previousSprint: sprint });
   return { ok: true, sprint };
 };
@@ -464,7 +482,8 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
     };
   }
 
-  let previousSprint = null;
+  let previousSprint;
+  let previousSprintContext = null;
   try {
     const previousResult = await fetchPreviousClosedSprint(
       selectedBoard.id,
@@ -487,6 +506,91 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
     );
   }
 
+  if (previousSprint?.id) {
+    try {
+      const previousDetail = await fetchSprintById(previousSprint.id);
+      if (previousDetail.ok && previousDetail.sprint) {
+        previousSprint = { ...previousSprint, ...previousDetail.sprint };
+      }
+
+      let previousPreviousSprint = null;
+      try {
+        const priorResult = await fetchPreviousClosedSprint(
+          selectedBoard.id,
+          previousSprint.activatedDate ||
+            previousSprint.startDate ||
+            previousSprint.completeDate,
+        );
+        previousPreviousSprint = priorResult.ok ? priorResult.sprint : null;
+      } catch {
+        previousPreviousSprint = null;
+      }
+
+      const previousIssuesResult = await fetchSprintIssues(
+        previousSprint.id,
+        projectKey,
+        selectedBoard.id,
+      );
+      if (!previousIssuesResult.ok) {
+        previousSprintContext = {
+          issues: null,
+          changelogsByKey: {},
+          previousPreviousSprint,
+          reason: "Previous sprint issues could not be loaded, so historical comparison is unavailable.",
+        };
+        limitations.push(previousSprintContext.reason);
+      } else {
+        let previousChangelogsByKey = {};
+        let previousPartial = Boolean(
+          previousIssuesResult.truncated || previousIssuesResult.partial,
+        );
+        if (previousPartial) {
+          limitations.push(
+            "Previous sprint issue list was truncated, so comparison may be incomplete.",
+          );
+        }
+        try {
+          const previousLogs = await fetchChangelogsForIssues(previousIssuesResult.issues);
+          previousChangelogsByKey = previousLogs.changelogsByKey;
+          if (previousLogs.capped || previousLogs.fetched < previousLogs.requested) {
+            previousPartial = true;
+            limitations.push(
+              `Previous sprint changelog history fetched for ${previousLogs.fetched} of ${previousLogs.requested} sampled issues.`,
+            );
+          }
+        } catch {
+          previousPartial = true;
+          limitations.push(
+            "Previous sprint changelog history was not available, so some comparison metrics are incomplete.",
+          );
+        }
+
+        logDiag("previous-sprint-loaded", {
+          stage: STAGES.FETCH_PREVIOUS_SPRINT,
+          projectKey,
+          boardId: selectedBoard.id,
+          sprintId: previousSprint.id,
+          issueCount: previousIssuesResult.issues.length,
+        });
+
+        previousSprintContext = {
+          issues: previousIssuesResult.issues,
+          changelogsByKey: previousChangelogsByKey,
+          previousPreviousSprint,
+          partial: previousPartial,
+        };
+      }
+    } catch {
+      previousSprintContext = {
+        issues: null,
+        changelogsByKey: {},
+        previousPreviousSprint: null,
+        reason: "Previous sprint data could not be loaded, so historical comparison is unavailable.",
+      };
+      limitations.push(previousSprintContext.reason);
+    }
+  }
+
   return {
     ok: true,
     context: {
@@ -498,6 +602,7 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
     issues: issuesResult.issues,
     changelogsByKey: changelogResult.changelogsByKey,
     previousSprint,
+    previousSprintContext,
     limitations,
   };
 };

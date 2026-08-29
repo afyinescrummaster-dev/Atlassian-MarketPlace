@@ -1,16 +1,39 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { invoke, rovo, view } from "@forge/bridge";
+import {
+  ROVO_INTENTS,
+  buildUserPrompt,
+} from "../../../src/delivery-intelligence/rovo-intents.js";
 import "./App.css";
 
 const AGENT_KEY = "delivery-intelligence-agent";
 const AGENT_NAME = "Delivery Intelligence";
-const UI_BUILD = "2.8.0";
+const UI_BUILD = "2.9.0";
 
 const formatMetric = (value, suffix = "") => {
   if (value == null || Number.isNaN(value)) {
     return "—";
   }
   return `${value}${suffix}`;
+};
+
+const formatSigned = (value, suffix = "") => {
+  if (value == null || Number.isNaN(value)) {
+    return "—";
+  }
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value}${suffix}`;
+};
+
+const formatShortDate = (value) => {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
 
 const statusClass = (status) => {
@@ -23,14 +46,81 @@ const statusClass = (status) => {
   return "";
 };
 
-const buildUserPrompt = (snapshot, intent) => {
-  const projectKey = snapshot?.context?.projectKey;
-  if (!projectKey) {
-    return intent;
+const directionClass = (direction) => {
+  if (direction === "improved") {
+    return "good";
+  }
+  if (direction === "deteriorated") {
+    return "bad";
+  }
+  return "";
+};
+
+const directionLabel = (direction) => {
+  if (direction === "improved") {
+    return "Improved";
+  }
+  if (direction === "deteriorated") {
+    return "Worse";
+  }
+  if (direction === "unchanged") {
+    return "Unchanged";
+  }
+  return "Unavailable";
+};
+
+const IssueRow = ({ issue }) => {
+  const parts = [issue.statusName, issue.reason].filter(Boolean);
+  if (issue.ageDays != null) {
+    const unit = ` ${issue.ageDays} day${issue.ageDays === 1 ? "" : "s"}`;
+    if (issue.reason === "Blocked") {
+      parts.push(`Blocked for${unit}`);
+    } else if (issue.reason === "Stale") {
+      parts.push(`No update for${unit}`);
+    } else {
+      parts.push(unit.trim());
+    }
+  }
+  if (issue.joinedAt) {
+    const label = issue.reason === "Added after sprint start" ? "Added" : "Joined";
+    parts.push(`${label} ${formatShortDate(issue.joinedAt)}`);
   }
 
-  return `${intent} Focus on the current sprint in project ${projectKey}.`;
+  return (
+    <div className="issue-row">
+      <div className="issue-key">{issue.key}</div>
+      <div className="issue-body">
+        <div className="issue-summary">{issue.summary || "No summary"}</div>
+        <div className="issue-meta">{parts.join(" · ")}</div>
+      </div>
+    </div>
+  );
 };
+
+const IssueList = ({ issues, empty }) => {
+  if (!issues?.length) {
+    return <p className="sub">{empty}</p>;
+  }
+  return (
+    <div className="issue-list">
+      {issues.map((issue) => (
+        <IssueRow key={issue.key} issue={issue} />
+      ))}
+    </div>
+  );
+};
+
+const DrilldownPanel = ({ title, children, onClose }) => (
+  <article className="card drilldown">
+    <div className="drilldown-head">
+      <strong>{title}</strong>
+      <button className="btn" type="button" onClick={onClose}>
+        Close
+      </button>
+    </div>
+    {children}
+  </article>
+);
 
 export default function App() {
   const [status, setStatus] = useState("loading");
@@ -41,6 +131,7 @@ export default function App() {
   const [aiMessage, setAiMessage] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [requestId, setRequestId] = useState(0);
+  const [drilldown, setDrilldown] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,6 +209,10 @@ export default function App() {
     setRequestId((value) => value + 1);
   };
 
+  const toggleDrilldown = (id) => {
+    setDrilldown((current) => (current === id ? null : id));
+  };
+
   const openRovo = async (intent) => {
     setAiMessage(null);
     if (!snapshot) {
@@ -155,6 +250,21 @@ export default function App() {
       );
     }
   };
+
+  const lists = useMemo(() => {
+    if (!snapshot) {
+      return {};
+    }
+    return {
+      original: snapshot.originalCommittedIssues || [],
+      added: snapshot.addedIssues || [],
+      blocked: snapshot.blockedIssues || [],
+      carryover: snapshot.carryoverIssues || [],
+      stale: snapshot.staleIssues || [],
+      done: snapshot.doneIssues || [],
+      open: snapshot.openIssues || [],
+    };
+  }, [snapshot]);
 
   if (status === "loading" && !snapshot) {
     return (
@@ -194,6 +304,66 @@ export default function App() {
     .filter(Boolean)
     .join(" · ");
 
+  const renderDrilldown = (id) => {
+    if (drilldown !== id) {
+      return null;
+    }
+    if (id === "completion") {
+      return (
+        <DrilldownPanel title="Sprint issues" onClose={() => setDrilldown(null)}>
+          <div className="split-lists">
+            <div>
+              <div className="kicker">Done ({lists.done.length})</div>
+              <IssueList issues={lists.done} empty="No Done issues in this sprint." />
+            </div>
+            <div>
+              <div className="kicker">Open ({lists.open.length})</div>
+              <IssueList issues={lists.open} empty="No open issues in this sprint." />
+            </div>
+          </div>
+        </DrilldownPanel>
+      );
+    }
+
+    const config = {
+      original: {
+        title: "Original commitment",
+        issues: lists.original,
+        empty: "No original-commitment issues were classified.",
+      },
+      added: {
+        title: "Added after start",
+        issues: lists.added,
+        empty: "No issues were added after sprint start.",
+      },
+      blocked: {
+        title: "Blocked issues",
+        issues: lists.blocked,
+        empty: "No blocked issues were detected.",
+      },
+      carryover: {
+        title: "Carryover issues",
+        issues: lists.carryover,
+        empty: "No carryover issues were detected.",
+      },
+      stale: {
+        title: "Stale issues",
+        issues: lists.stale,
+        empty: "No stale issues were detected.",
+      },
+    }[id];
+
+    if (!config) {
+      return null;
+    }
+
+    return (
+      <DrilldownPanel title={config.title} onClose={() => setDrilldown(null)}>
+        <IssueList issues={config.issues} empty={config.empty} />
+      </DrilldownPanel>
+    );
+  };
+
   return (
     <div className="shell">
       <header className="header">
@@ -232,61 +402,146 @@ export default function App() {
         </article>
       ) : (
         <>
-          <section className="grid-2">
-            <article className="card">
-              <div className="kicker">Sprint Health</div>
-              <div className="score">
-                {formatMetric(snapshot.healthScore)} / {snapshot.healthMax || 100}
-              </div>
-              <div style={{ marginTop: 8 }}>
-                <span className={`pill ${statusClass(snapshot.healthStatus)}`}>
-                  {snapshot.healthStatus || "—"}
-                </span>
-              </div>
-            </article>
-            <article className="card">
-              <div className="kicker">Snapshot</div>
-              <p className="sub">
-                Generated {new Date(snapshot.generatedAt).toLocaleString()}
-              </p>
-              <p className="sub">
-                {snapshot.currentIssueCount ?? snapshot.totalIssueCount ?? 0} current
-                {snapshot.originalCommittedCount != null
-                  ? ` · ${snapshot.originalCommittedCount} original commitment`
-                  : ""}
-                {snapshot.addedIssueCount != null
-                  ? ` · ${snapshot.addedIssueCount} added after start`
-                  : ""}
-              </p>
-              {(snapshot.limitations || []).slice(0, 2).map((item) => (
-                <p className="sub" key={item}>
-                  {item}
+          <section>
+            <h2 className="section-title">Sprint Overview</h2>
+            <div className="grid-2">
+              <article className="card">
+                <div className="kicker">Sprint Health</div>
+                <div className="score">
+                  {formatMetric(snapshot.healthScore)} / {snapshot.healthMax || 100}
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <span className={`pill ${statusClass(snapshot.healthStatus)}`}>
+                    {snapshot.healthStatus || "—"}
+                  </span>
+                </div>
+              </article>
+              <article className="card">
+                <div className="kicker">Snapshot</div>
+                <p className="sub">
+                  Generated {new Date(snapshot.generatedAt).toLocaleString()}
                 </p>
-              ))}
-            </article>
+                <p className="sub">
+                  {snapshot.currentIssueCount ?? snapshot.totalIssueCount ?? 0} current
+                  {snapshot.originalCommittedCount != null
+                    ? ` · ${snapshot.originalCommittedCount} original commitment`
+                    : ""}
+                  {snapshot.addedIssueCount != null
+                    ? ` · ${snapshot.addedIssueCount} added after start`
+                    : ""}
+                </p>
+                {(snapshot.limitations || []).slice(0, 2).map((item) => (
+                  <p className="sub" key={item}>
+                    {item}
+                  </p>
+                ))}
+              </article>
+            </div>
+
+            <section className="kpi-grid" aria-label="Sprint KPIs">
+              <button
+                className={`kpi ${drilldown === "completion" ? "active" : ""}`}
+                type="button"
+                onClick={() => toggleDrilldown("completion")}
+              >
+                <div className="n">{formatMetric(snapshot.completionPercent, "%")}</div>
+                <div className="l">Completion</div>
+              </button>
+              <button
+                className={`kpi ${drilldown === "added" ? "active" : ""}`}
+                type="button"
+                onClick={() => toggleDrilldown("added")}
+              >
+                <div className="n">{formatMetric(snapshot.scopeChangePercent, "%")}</div>
+                <div className="l">Scope change</div>
+              </button>
+              <button
+                className={`kpi ${drilldown === "carryover" ? "active" : ""}`}
+                type="button"
+                onClick={() => toggleDrilldown("carryover")}
+              >
+                <div className="n">{formatMetric(snapshot.carryoverCount)}</div>
+                <div className="l">Carryover</div>
+              </button>
+              <button
+                className={`kpi ${drilldown === "blocked" ? "active" : ""}`}
+                type="button"
+                onClick={() => toggleDrilldown("blocked")}
+              >
+                <div className="n">{formatMetric(snapshot.blockedCount)}</div>
+                <div className="l">Blocked</div>
+              </button>
+              <button
+                className={`kpi ${drilldown === "stale" ? "active" : ""}`}
+                type="button"
+                onClick={() => toggleDrilldown("stale")}
+              >
+                <div className="n">{formatMetric(snapshot.staleCount)}</div>
+                <div className="l">Stale</div>
+              </button>
+            </section>
           </section>
 
-          <section className="kpi-grid" aria-label="Sprint KPIs">
-            <div className="kpi">
-              <div className="n">{formatMetric(snapshot.completionPercent, "%")}</div>
-              <div className="l">Completion</div>
-            </div>
-            <div className="kpi">
-              <div className="n">{formatMetric(snapshot.scopeChangePercent, "%")}</div>
-              <div className="l">Scope change</div>
-            </div>
-            <div className="kpi">
-              <div className="n">{formatMetric(snapshot.carryoverCount)}</div>
-              <div className="l">Carryover</div>
-            </div>
-            <div className="kpi">
-              <div className="n">{formatMetric(snapshot.blockedCount)}</div>
-              <div className="l">Blocked</div>
-            </div>
-            <div className="kpi">
-              <div className="n">{formatMetric(snapshot.staleCount)}</div>
-              <div className="l">Stale</div>
-            </div>
+          <section>
+            <h2 className="section-title">Scope Movement</h2>
+            <article className="card scope-card">
+              <p className="sub scope-intro">
+                Original commitment versus work added after the sprint started.
+                Growth is added after start divided by original commitment, not
+                current total.
+              </p>
+              <div className="scope-grid">
+                <button
+                  className={`scope-stat ${drilldown === "original" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => toggleDrilldown("original")}
+                >
+                  <div className="n">{formatMetric(snapshot.originalCommittedCount)}</div>
+                  <div className="l">Original commitment</div>
+                </button>
+                <button
+                  className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => toggleDrilldown("added")}
+                >
+                  <div className="n">{formatMetric(snapshot.addedIssueCount)}</div>
+                  <div className="l">Added after start</div>
+                </button>
+                <div className="scope-stat">
+                  <div className="n">{formatMetric(snapshot.currentIssueCount)}</div>
+                  <div className="l">Current scope</div>
+                </div>
+                <button
+                  className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => toggleDrilldown("added")}
+                >
+                  <div className="n">{formatSigned(snapshot.scopeChangePercent, "%")}</div>
+                  <div className="l">Scope growth</div>
+                </button>
+              </div>
+              <p className="note">
+                Removed / De-scoped is unavailable. Reliable removal history is
+                not available yet, so net change is not shown.
+              </p>
+              <div className="btn-row">
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => toggleDrilldown("original")}
+                >
+                  View original commitment
+                </button>
+                <button
+                  className="btn primary"
+                  type="button"
+                  onClick={() => toggleDrilldown("added")}
+                >
+                  View added issues
+                </button>
+              </div>
+            </article>
+            {["original", "added"].includes(drilldown) ? renderDrilldown(drilldown) : null}
           </section>
 
           <section>
@@ -299,12 +554,106 @@ export default function App() {
               </article>
             ) : (
               snapshot.topAnomalies.map((item) => (
-                <div className="anomaly" key={item.id}>
-                  <strong>{item.title}</strong>
-                  <div className="sub">{item.summary}</div>
-                </div>
+                <article className="anomaly" key={item.id}>
+                  <div className="anomaly-head">
+                    <span className={`pill ${item.severity === "High" ? "bad" : ""}`}>
+                      {item.severity}
+                    </span>
+                    <strong>{item.title}</strong>
+                  </div>
+                  <p className="sub">{item.explanation || item.summary}</p>
+                  {item.evidence ? <p className="note">{item.evidence}</p> : null}
+                  <div className="anomaly-meta">
+                    {item.affectedIssueCount != null
+                      ? `${item.affectedIssueCount} issue${item.affectedIssueCount === 1 ? "" : "s"}`
+                      : null}
+                    {item.issueKey ? ` · ${item.issueKey}` : ""}
+                  </div>
+                  {item.suggestedAction && item.drillDown ? (
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => toggleDrilldown(item.drillDown)}
+                    >
+                      {item.suggestedAction}
+                    </button>
+                  ) : null}
+                </article>
               ))
             )}
+            {drilldown && !["original", "added"].includes(drilldown)
+              ? renderDrilldown(drilldown)
+              : null}
+          </section>
+
+          <section>
+            <h2 className="section-title">Sprint Trends</h2>
+            <article className="card">
+              <div className="kicker">Current sprint vs previous sprint</div>
+              {snapshot.comparison?.capability?.status === "unavailable" ||
+              !snapshot.comparison?.rows?.length ? (
+                <p className="sub">
+                  {snapshot.comparison?.capability?.reason ||
+                    "Previous sprint comparison is unavailable."}
+                </p>
+              ) : (
+                <>
+                  <p className="sub">
+                    {snapshot.sprint?.name || "Current sprint"} vs{" "}
+                    {snapshot.comparison.previousSprint?.name || "previous sprint"}
+                    {snapshot.comparison.capability.status === "partial"
+                      ? " · Partial historical data"
+                      : ""}
+                  </p>
+                  {snapshot.comparison.capability.status === "partial" ? (
+                    <p className="note">{snapshot.comparison.capability.reason}</p>
+                  ) : null}
+                  <div className="compare-list">
+                    {snapshot.comparison.rows.map((row) => (
+                      <div className="compare-row" key={row.key}>
+                        <div className="compare-label">{row.label}</div>
+                        <div className="compare-values">
+                          {formatMetric(
+                            row.current,
+                            row.key.includes("Percent") || row.key === "healthScore"
+                              ? row.key === "healthScore"
+                                ? ""
+                                : "%"
+                              : "",
+                          )}{" "}
+                          vs{" "}
+                          {formatMetric(
+                            row.previous,
+                            row.key.includes("Percent") || row.key === "healthScore"
+                              ? row.key === "healthScore"
+                                ? ""
+                                : "%"
+                              : "",
+                          )}
+                        </div>
+                        <div className="compare-delta">
+                          <span className={`pill ${directionClass(row.direction)}`}>
+                            {directionLabel(row.direction)}
+                          </span>
+                          <span className="sub">
+                            {row.delta == null
+                              ? "—"
+                              : formatSigned(
+                                  row.delta,
+                                  row.key === "healthScore" || row.key.includes("Percent")
+                                    ? row.key === "healthScore"
+                                      ? " points"
+                                      : " points"
+                                    : "",
+                                )}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </article>
           </section>
         </>
       )}
@@ -313,15 +662,14 @@ export default function App() {
         <div className="kicker">AI actions</div>
         <p className="sub">
           Rovo is user-triggered only. The dashboard never calls AI automatically.
+          Each action retrieves deterministic sprint facts behind the scenes.
         </p>
         <div className="btn-row">
           <button
             className="btn primary"
             type="button"
             disabled={!snapshot?.sprint}
-            onClick={() =>
-              openRovo("Explain this sprint's top risks in plain language.")
-            }
+            onClick={() => openRovo(ROVO_INTENTS.explain)}
           >
             Explain sprint
           </button>
@@ -329,9 +677,7 @@ export default function App() {
             className="btn"
             type="button"
             disabled={!snapshot?.sprint}
-            onClick={() =>
-              openRovo("Recommend the actions this team should address first.")
-            }
+            onClick={() => openRovo(ROVO_INTENTS.recommend)}
           >
             Recommend actions
           </button>
@@ -339,9 +685,7 @@ export default function App() {
             className="btn"
             type="button"
             disabled={!snapshot?.sprint}
-            onClick={() =>
-              openRovo("Draft a concise leadership brief for this sprint.")
-            }
+            onClick={() => openRovo(ROVO_INTENTS.brief)}
           >
             Generate leadership brief
           </button>
