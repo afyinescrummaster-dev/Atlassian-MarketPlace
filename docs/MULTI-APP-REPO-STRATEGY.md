@@ -260,6 +260,8 @@ correctly lives under project settings).
 ## Related docs
 
 - `docs/CHAT-CONTEXT.md` — global handoff, secrets, demo site
+- `docs/RELEASE-PROCESS.md` — official tags, deploy, rollback (repo + Forge)
+- `docs/RELEASES.md` — tagged release registry
 - `docs/ADMIN-HEALTH-LAB.md` — Admin Health product detail
 - `docs/ROVO-DELIVERY-INTELLIGENCE-ARCHITECTURE.md` — future product research
 - `AGENTS.md` — agent entry point and deploy checklist

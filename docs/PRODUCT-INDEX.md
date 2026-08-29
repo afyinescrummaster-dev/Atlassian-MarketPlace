@@ -24,14 +24,22 @@ docs/products/                  # One product doc per surface
 
 ## Deploy commands
 
-**Legacy app (unchanged):**
+Official releases use tags — see **`docs/RELEASE-PROCESS.md`** and **`docs/RELEASES.md`**.
+
+```bash
+./scripts/release-deploy.sh di 0.1.0 development
+./scripts/release-rollback.sh di 0.1.0 development
+./scripts/release-deploy.sh legacy 0.4.0 development
+```
+
+**Legacy app (ad-hoc / non-tagged):**
 
 ```bash
 npm run lint:code && npm test && npm run build
 forge deploy -e development --non-interactive
 ```
 
-**Delivery Intelligence (after `forge register`):**
+**Delivery Intelligence (ad-hoc / non-tagged):**
 
 ```bash
 cd apps/delivery-intelligence

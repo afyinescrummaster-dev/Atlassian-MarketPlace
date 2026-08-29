@@ -53,9 +53,10 @@ forge lint
 echo "==> Deploy to development"
 forge deploy -e development --non-interactive
 
-echo "==> Install / upgrade on site (interactive site picker may appear)"
-forge install --upgrade -e development --non-interactive 2>/dev/null || \
-  forge install -e development
+echo "==> Install / upgrade on site"
+SITE="${FORGE_INSTALL_SITE:-one-atlas-qzzp.atlassian.net}"
+forge install --upgrade -e development --site "$SITE" --product jira --non-interactive 2>/dev/null || \
+  forge install -e development --site "$SITE" --product jira --non-interactive
 
 echo ""
 echo "Done. Open a Jira Software project → Apps → Delivery Intelligence."

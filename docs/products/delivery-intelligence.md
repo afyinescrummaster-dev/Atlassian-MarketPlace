@@ -98,13 +98,14 @@ See also: `docs/ROVO-DELIVERY-INTELLIGENCE-ARCHITECTURE.md`
 
 | Scope | Why |
 |---|---|
-| `read:jira-work` | Issue fields, changelog (`/rest/api/3/issue/{key}/changelog`) |
-| `read:sprint:jira-software` | Boards, active sprint, sprint issues (`/rest/agile/1.0/...`) |
+| `read:jira-work` | Issue changelog |
+| `read:sprint:jira-software` | Sprints and sprint metadata |
+| `read:board-scope:jira-software` | Board list |
+| `read:project:jira` | Project context |
+| `read:issue-details:jira` | Sprint issue fields |
+| `read:jql:jira` | Sprint issue retrieval |
 
-No write scopes. No `storage:app` in v0.1 (no KVS caching yet).
-
-If board listing fails after install, run `forge lint --fix` in this app folder
-and reinstall — Atlassian may require an additional read board scope for your site.
+Added automatically by `forge lint --fix` after registration. All read-only — no write scopes.
 
 ---
 
@@ -213,28 +214,18 @@ Responses are intentionally small (top anomalies capped, no full backlog dump).
 
 ---
 
-## Manual Forge app registration (required before deploy)
+## Manual Forge app registration
 
-This app does **not** reuse the legacy Admin Health app ID.
+**Done** for the demo site via `scripts/register-delivery-intelligence.sh`.
 
-Non-interactive Cloud Agents cannot complete Developer Space selection. Run
-locally or in an interactive shell:
-
-```bash
-cd apps/delivery-intelligence
-npm install
-npm run build
-forge register "Delivery Intelligence for Jira"
-```
-
-Forge writes a real `app.id` into `manifest.yml`. Then:
+For a fresh clone or new environment, run:
 
 ```bash
-forge deploy -e development
-forge install -e development
+chmod +x scripts/register-delivery-intelligence.sh
+./scripts/register-delivery-intelligence.sh
 ```
 
-Select the Jira site and approve scopes when prompted.
+See `docs/DELIVERY-INTELLIGENCE-LAPTOP-SETUP.md` for a laptop agent takeover prompt.
 
 ---
 
