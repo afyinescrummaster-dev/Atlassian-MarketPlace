@@ -59,9 +59,11 @@ fetch → branch from accepted main → commit → (optional: deploy development
 2. Create a branch from current accepted `main` (`feature/…`, `fix/…`, `chore/…`). Do not develop on `main`.
 3. Change **one product** when possible (see `docs/PRODUCT-INDEX.md`)
 4. Commit before any Forge deploy. Tree must be clean.
-5. Deploy with `./scripts/forge-deploy.sh di development` (or `legacy`).
-   It refuses a dirty tree, prints the last recorded SHA, deploys, and
-   records the new row. Then commit the updated log files.
+5. Push the branch to origin. Then
+   `./scripts/forge-deploy.sh di development` (or `legacy`).
+   It refuses a dirty tree, requires the SHA on origin, deploys, creates
+   `deploy/<app>/<env>/<version>`, pushes that tag, and records jsonl.
+   Then commit the updated log files.
 6. Deploying is not known-good. Wait for user acceptance.
 7. After acceptance: merge to `main`. If the user names a milestone tag, create it and update `docs/RELEASES.md`.
 
@@ -118,8 +120,14 @@ This:
 ```
 
 **Preferred for a development revision that never reached `main`:**
-check out the recorded SHA from `docs/DEPLOYMENT-HISTORY.md`, rebuild,
-`forge deploy` from that clean commit, then record the new row.
+
+```bash
+./scripts/rollback-deployment.sh di development 2.14.0
+```
+
+This uses an isolated git worktree. It does not checkout or reset the
+active workspace. It records a new deployment event and a new
+`deploy/<app>/<env>/<newVersion>` tag.
 
 Do **not**:
 
@@ -172,4 +180,6 @@ Forge `deploy list` is not a substitute for Git SHAs or this log.
 - `docs/RELEASES.md` — official tags only
 - `docs/PRODUCT-INDEX.md` — which product to edit
 - `docs/MULTI-APP-REPO-STRATEGY.md` — monorepo structure
+- `docs/DEPLOYMENT-MODEL.md` — why this process exists
+- `scripts/forge-deploy.sh` / `rollback-deployment.sh`
 - `scripts/release-tag.sh` / `release-deploy.sh` / `release-rollback.sh`

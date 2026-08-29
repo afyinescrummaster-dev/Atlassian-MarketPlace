@@ -20,8 +20,11 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
 - Delivery Intelligence known-good: `di-v0.1.1` → `4f44eb3` → `main`
   via `8b570a9` → Forge development **2.13.0**. `di-v0.1.0` is not
-  that source. See `docs/RECOVERY-2.8.0.md`. Rules: `AGENTS.md`.
-  Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
+  that source. See `docs/RECOVERY-2.8.0.md` and
+  `docs/DEPLOYMENT-MODEL.md`. Deploy with
+  `./scripts/forge-deploy.sh`; roll back with
+  `./scripts/rollback-deployment.sh`. History:
+  `docs/deployments.jsonl`.
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -308,6 +311,7 @@ Upgrade the install only if Forge says a new scope is required.
 ## Related docs
 
 - `AGENTS.md` — Git + Forge working rules
+- `docs/DEPLOYMENT-MODEL.md` — why deployment history is automated
 - `docs/DEPLOYMENT-HISTORY.md` — every recorded Forge deploy
 - `docs/RELEASES.md` — official tagged milestones only
 - `docs/MULTI-APP-REPO-STRATEGY.md` — managing multiple products/modules in

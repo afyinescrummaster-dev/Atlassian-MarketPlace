@@ -7,16 +7,19 @@ Update this file at the end of meaningful sessions.
 
 ---
 
-## 2026-08-29 — [Process] automate deployment history
+## 2026-08-29 — [Process] CMS-style deployment history
 
-### Goal
-Make every Forge deploy map to a Git SHA automatically.
+### Why
+Forge 2.8.0 was deployed dirty and uncommitted, so Git could not roll
+back. Recovery closed at `di-v0.1.1` / `4f44eb3` / Forge 2.13.0.
 
 ### Done
-- `docs/deployments.jsonl` append-only machine log
-- `./scripts/forge-deploy.sh` refuses dirty trees, deploys, records version
-- `./scripts/record-deploy.sh` + renderer for `docs/DEPLOYMENT-HISTORY.md`
-- Branch: `feature/deployment-history-automation` (not merged yet)
+- Kept `docs/deployments.jsonl`; added deploy tags
+  `deploy/<app>/<env>/<version>`
+- Origin SHA required before deploy
+- Isolated worktree rollback: `./scripts/rollback-deployment.sh`
+- Receipt after success; no record/tag on failure
+- Branch: `feature/deployment-history-automation` (not merged)
 
 ---
 
