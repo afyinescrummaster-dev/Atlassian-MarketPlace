@@ -26,6 +26,8 @@ drill-downs, current vs previous sprint, distinct Rovo intents.
 - Waiting for live Jira acceptance. Do not merge to `main`.
 - Follow-up: drill-downs now open the Jira issue or the matching
   JQL issue list. Forge development **2.17.0** from `c154954`.
+- Follow-up: metric clicks stay on the report; Jira opens only from an
+  issue key or Show in Jira. Forge development **2.18.0** from `4bb252d`.
 
 ### Out of scope (kept out)
 - Dependency intelligence
