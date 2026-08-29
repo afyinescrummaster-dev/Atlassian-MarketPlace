@@ -7,7 +7,9 @@ Status: **V1 milestone `di-v1.0.0`** @ `c780ff5`. Next increment
 (features 1–5: Scope Movement, attention items, drill-downs, current vs
 previous sprint, distinct Rovo intents) is on
 `feature/sprint-intelligence-core`. Do not merge until live Jira
-acceptance. Historical recovered known-good remains `di-v0.1.1` @
+acceptance. Live development deploy for this increment: **2.16.0**
+from `1523b75` (`deploy/di/development/2.16.0`). Historical recovered
+known-good remains `di-v0.1.1` @
 `4f44eb3` — do not delete. See `docs/RECOVERY-2.8.0.md`. Working rules:
 `AGENTS.md`. Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
 

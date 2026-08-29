@@ -253,6 +253,9 @@ dependency intelligence, automation, write scopes, or Admin Health
 changes. Health-score formula unchanged. Removals/de-scope left
 unavailable. Do not merge to `main` until the user accepts the live
 Jira dashboard. No official `di-v*` tag for this increment.
+Forge development **2.16.0** from `1523b75`
+(`deploy/di/development/2.16.0`). Rollback:
+`./scripts/rollback-deployment.sh di development 2.16.0`.
 
 ## Secrets for mobile and Cloud Agents
 

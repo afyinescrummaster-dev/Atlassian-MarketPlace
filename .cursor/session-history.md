@@ -20,7 +20,10 @@ drill-downs, current vs previous sprint, distinct Rovo intents.
 - Dashboard UI Build `2.9.0`: Overview, Scope Movement, attention,
   trends, AI actions
 - Tests: 31 passing. No official release tag. Not merged to `main`.
-- Waiting for live Jira acceptance after development deploy.
+- Forge development **2.16.0** from `1523b75`.
+  Revision: `deploy/di/development/2.16.0`.
+  Rollback: `./scripts/rollback-deployment.sh di development 2.16.0`
+- Waiting for live Jira acceptance. Do not merge to `main`.
 
 ### Out of scope (kept out)
 - Dependency intelligence
