@@ -48,30 +48,11 @@ FACTS:
 ${JSON.stringify(facts, null, 2)}`;
 };
 
-const errorCopy = (code, detail) => {
-  if (code === "permission") {
-    return "This app could not read sprint data with the current permissions.";
-  }
-  if (code === "missing-project") {
-    return "Enter a Jira Software project key (for example the Platform project key).";
-  }
-  if (code === "project-not-found") {
-    return "No Jira project was found for that key. Check the project key and try again.";
-  }
-  if (detail) {
-    return `We couldn’t analyze this sprint right now. ${detail}`;
-  }
-  return "We couldn’t analyze this sprint right now.";
-};
-
 export default function App() {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
-  const [errorDetail, setErrorDetail] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
   const [projectKey, setProjectKey] = useState(null);
-  const [projectInput, setProjectInput] = useState("PLAT");
-  const [needsProject, setNeedsProject] = useState(false);
   const [rovoEnabled, setRovoEnabled] = useState(null);
   const [aiMessage, setAiMessage] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,37 +63,16 @@ export default function App() {
 
     const run = async () => {
       setError(null);
-      setErrorDetail(null);
       try {
         const context = await view.getContext();
         if (cancelled) {
           return;
         }
-
-        const fromContext =
+        const key =
           context?.extension?.project?.key ||
           context?.extension?.projectKey ||
           context?.project?.key ||
           null;
-
-        if (fromContext) {
-          setProjectInput(String(fromContext).toUpperCase());
-        }
-
-        const key = (fromContext || projectKey || projectInput || "")
-          .toString()
-          .trim()
-          .toUpperCase();
-
-        if (!fromContext && !projectKey) {
-          setNeedsProject(true);
-          setStatus("ready");
-          setRefreshing(false);
-          setSnapshot(null);
-          return;
-        }
-
-        setNeedsProject(false);
         setProjectKey(key);
 
         const result = await invoke("getDeliveryHealth", {
@@ -131,18 +91,14 @@ export default function App() {
 
         setSnapshot(null);
         setError(result?.error || "unavailable");
-        setErrorDetail(result?.detail || null);
         setStatus("error");
         setRefreshing(false);
-      } catch (err) {
+      } catch {
         if (cancelled) {
           return;
         }
         setSnapshot(null);
         setError("unavailable");
-        setErrorDetail(
-          typeof err?.message === "string" ? err.message.slice(0, 200) : null,
-        );
         setStatus("error");
         setRefreshing(false);
       }
@@ -152,7 +108,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [requestId, projectKey]);
+  }, [requestId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,16 +131,6 @@ export default function App() {
 
   const refresh = () => {
     setRefreshing(true);
-    setRequestId((value) => value + 1);
-  };
-
-  const loadProject = () => {
-    const next = projectInput.trim().toUpperCase();
-    if (!next) {
-      return;
-    }
-    setRefreshing(true);
-    setProjectKey(next);
     setRequestId((value) => value + 1);
   };
 
@@ -214,7 +160,7 @@ export default function App() {
     }
   };
 
-  if (status === "loading" && !snapshot && !needsProject) {
+  if (status === "loading" && !snapshot) {
     return (
       <div className="state">
         <div className="spinner" />
@@ -227,22 +173,16 @@ export default function App() {
     return (
       <div className="state">
         <h2>Delivery Intelligence</h2>
-        <p className="sub">{errorCopy(error, errorDetail)}</p>
-        <div className="btn-row" style={{ justifyContent: "center" }}>
-          <input
-            className="search"
-            value={projectInput}
-            onChange={(event) => setProjectInput(event.target.value)}
-            placeholder="Project key"
-            aria-label="Project key"
-          />
-          <button className="btn primary" type="button" onClick={loadProject}>
-            Load project
-          </button>
-          <button className="btn" type="button" onClick={refresh}>
-            Retry
-          </button>
-        </div>
+        <p className="sub">
+          {error === "permission"
+            ? "This app could not read sprint data with the current permissions."
+            : error === "missing-project"
+              ? "Open Delivery Intelligence from a Jira project to load sprint context."
+              : "We couldn’t analyze this sprint right now."}
+        </p>
+        <button className="btn primary" type="button" onClick={refresh}>
+          Retry
+        </button>
       </div>
     );
   }
@@ -260,23 +200,13 @@ export default function App() {
       <header className="header">
         <div>
           <h1>Delivery Intelligence</h1>
-          <div className="meta">{contextLine || "Choose a project to analyze"}</div>
+          <div className="meta">{contextLine}</div>
         </div>
         <div className="btn-row">
-          <input
-            className="search"
-            value={projectInput}
-            onChange={(event) => setProjectInput(event.target.value)}
-            placeholder="Project key"
-            aria-label="Project key"
-          />
-          <button className="btn" type="button" onClick={loadProject}>
-            Load
-          </button>
           <button
             className="btn"
             type="button"
-            disabled={refreshing || !projectKey}
+            disabled={refreshing}
             onClick={refresh}
           >
             {refreshing ? "Refreshing…" : "Refresh"}
@@ -284,30 +214,12 @@ export default function App() {
         </div>
       </header>
 
-      {needsProject && !snapshot ? (
-        <article className="card">
-          <strong>Choose a project</strong>
-          <p className="sub">
-            Enter a Software project key for the Platform board, then tap Load.
-          </p>
-          <div className="btn-row">
-            <button
-              className="btn primary"
-              type="button"
-              onClick={loadProject}
-            >
-              Load project
-            </button>
-          </div>
-        </article>
-      ) : null}
-
-      {!needsProject && !snapshot?.sprint ? (
+      {!snapshot?.sprint ? (
         <article className="card">
           <strong>No active sprint</strong>
           <p className="sub">
-            Open this on a Jira Software project with an active sprint on its
-            board. Metrics are not estimated when sprint data is unavailable.
+            Open this page on a Jira Software project with an active sprint on
+            its board. Metrics are not estimated when sprint data is unavailable.
           </p>
           {(snapshot?.limitations || []).map((item) => (
             <p className="sub" key={item}>
@@ -315,9 +227,7 @@ export default function App() {
             </p>
           ))}
         </article>
-      ) : null}
-
-      {snapshot?.sprint ? (
+      ) : (
         <>
           <section className="grid-2">
             <article className="card">
@@ -388,7 +298,7 @@ export default function App() {
             )}
           </section>
         </>
-      ) : null}
+      )}
 
       <section className="ai-panel card">
         <div className="kicker">AI actions</div>

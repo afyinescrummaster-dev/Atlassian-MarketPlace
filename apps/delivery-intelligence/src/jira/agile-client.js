@@ -1,54 +1,14 @@
-import api, { route } from "@forge/api";
+import { route } from "@forge/api";
+import {
+  permissionStatus,
+  readJson,
+  requestJira,
+} from "@atlassian-marketplace/shared-jira";
 import { MAX_CHANGELOG_ISSUES, MAX_SPRINT_ISSUES } from "../delivery-intelligence/constants.js";
 import {
   extractSprintChanges,
   normalizeIssue,
 } from "../delivery-intelligence/normalize.js";
-
-const permissionStatus = (status) =>
-  status === 401 || status === 403 || status === 404;
-
-const readJson = async (response) => {
-  try {
-    return await response.json();
-  } catch {
-    return null;
-  }
-};
-
-const requestJira = async (path, options = {}) => {
-  const { headers, ...rest } = options;
-  return api.asUser().requestJira(path, {
-    ...rest,
-    headers: {
-      Accept: "application/json",
-      ...headers,
-    },
-  });
-};
-
-export const fetchProject = async (projectKey) => {
-  const response = await requestJira(route`/rest/api/3/project/${projectKey}`);
-  if (permissionStatus(response.status)) {
-    return { ok: false, error: "permission", status: response.status };
-  }
-  if (!response.ok) {
-    return {
-      ok: false,
-      error: response.status === 404 ? "project-not-found" : "unavailable",
-      status: response.status,
-    };
-  }
-  const project = (await readJson(response)) ?? {};
-  return {
-    ok: true,
-    project: {
-      key: project.key || projectKey,
-      name: project.name || projectKey,
-      type: project.projectTypeKey || null,
-    },
-  };
-};
 
 export const fetchBoardsForProject = async (projectKey) => {
   const response = await requestJira(
@@ -56,10 +16,10 @@ export const fetchBoardsForProject = async (projectKey) => {
   );
 
   if (permissionStatus(response.status)) {
-    return { ok: false, error: "permission", status: response.status };
+    return { ok: false, error: "permission" };
   }
   if (!response.ok) {
-    return { ok: false, error: "unavailable", status: response.status };
+    return { ok: false, error: "unavailable" };
   }
 
   const payload = (await readJson(response)) ?? {};
@@ -79,16 +39,11 @@ export const fetchActiveSprint = async (boardId) => {
     route`/rest/agile/1.0/board/${boardId}/sprint?state=active`,
   );
 
-  // Kanban / non-scrum boards often return 400 for sprint endpoints.
-  if (response.status === 400) {
-    return { ok: true, sprint: null, unsupported: true };
-  }
-
   if (permissionStatus(response.status)) {
-    return { ok: false, error: "permission", status: response.status };
+    return { ok: false, error: "permission" };
   }
   if (!response.ok) {
-    return { ok: false, error: "unavailable", status: response.status };
+    return { ok: false, error: "unavailable" };
   }
 
   const payload = (await readJson(response)) ?? {};
@@ -125,12 +80,12 @@ export const fetchSprintIssues = async (sprintId) => {
     if (permissionStatus(response.status)) {
       return issues.length
         ? { ok: true, issues, truncated: true, partial: true }
-        : { ok: false, error: "permission", status: response.status };
+        : { ok: false, error: "permission" };
     }
     if (!response.ok) {
       return issues.length
         ? { ok: true, issues, truncated: true, partial: true }
-        : { ok: false, error: "unavailable", status: response.status };
+        : { ok: false, error: "unavailable" };
     }
 
     const payload = (await readJson(response)) ?? {};
@@ -165,12 +120,10 @@ export const fetchIssueChangelog = async (issueKey) => {
   return { ok: true, changes: extractSprintChanges(payload) };
 };
 
-export const fetchChangelogsForIssues = async (
-  issues,
-  limit = MAX_CHANGELOG_ISSUES,
-) => {
+export const fetchChangelogsForIssues = async (issues, limit = MAX_CHANGELOG_ISSUES) => {
   const changelogsByKey = {};
   const slice = issues.slice(0, limit);
+  let fetched = 0;
 
   for (const issue of slice) {
     if (!issue.key) {
@@ -179,97 +132,35 @@ export const fetchChangelogsForIssues = async (
     const result = await fetchIssueChangelog(issue.key);
     if (result.ok) {
       changelogsByKey[issue.key] = result.changes;
+      fetched += 1;
     }
   }
 
   return {
     changelogsByKey,
-    fetched: Object.keys(changelogsByKey).length,
+    fetched,
     requested: slice.length,
     capped: issues.length > limit,
   };
 };
 
-const pickBoardOrder = (boards) => {
-  const score = (board) => {
-    if (board.type === "scrum") {
-      return 0;
-    }
-    if (board.type === "simple") {
-      return 1;
-    }
-    return 2;
-  };
-  return [...boards].sort((a, b) => score(a) - score(b));
-};
-
 export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
-  const projectResult = await fetchProject(projectKey);
-  if (!projectResult.ok) {
-    return {
-      ok: false,
-      error: projectResult.error,
-      detail: `Project lookup failed (${projectResult.status || "unknown"}).`,
-    };
-  }
-
   const boardsResult = await fetchBoardsForProject(projectKey);
   if (!boardsResult.ok) {
-    return {
-      ok: false,
-      error: boardsResult.error,
-      detail: `Board lookup failed (${boardsResult.status || "unknown"}).`,
-    };
+    return { ok: false, error: boardsResult.error };
   }
 
-  const boards = pickBoardOrder(boardsResult.boards);
-  let selectedBoard =
-    boards.find((board) => String(board.id) === String(boardId)) || null;
-
-  let sprint = null;
-  const limitations = [];
-
-  if (selectedBoard) {
-    const sprintResult = await fetchActiveSprint(selectedBoard.id);
-    if (!sprintResult.ok) {
-      return {
-        ok: false,
-        error: sprintResult.error,
-        detail: `Active sprint lookup failed on board ${selectedBoard.id}.`,
-      };
-    }
-    sprint = sprintResult.sprint;
-    if (sprintResult.unsupported) {
-      limitations.push(
-        `Board "${selectedBoard.name}" does not support sprints (often Kanban).`,
-      );
-    }
-  } else {
-    for (const board of boards) {
-      const sprintResult = await fetchActiveSprint(board.id);
-      if (!sprintResult.ok) {
-        continue;
-      }
-      if (sprintResult.unsupported) {
-        limitations.push(
-          `Board "${board.name}" does not support sprints (often Kanban).`,
-        );
-        continue;
-      }
-      selectedBoard = board;
-      sprint = sprintResult.sprint;
-      if (sprint) {
-        break;
-      }
-    }
-  }
+  const boards = boardsResult.boards;
+  const selectedBoard =
+    boards.find((board) => String(board.id) === String(boardId)) ||
+    boards[0] ||
+    null;
 
   if (!selectedBoard) {
     return {
       ok: true,
       context: {
-        projectKey: projectResult.project.key,
-        projectName: projectResult.project.name,
+        projectKey,
         boardId: null,
         boardName: null,
       },
@@ -277,41 +168,38 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
       issues: [],
       changelogsByKey: {},
       limitations: [
-        ...limitations,
-        "No Jira Software board with sprint support was found for this project.",
+        "No Jira Software board was found for this project. Sprint metrics require a board-backed project.",
       ],
     };
   }
 
-  if (!sprint) {
+  const sprintResult = await fetchActiveSprint(selectedBoard.id);
+  if (!sprintResult.ok) {
+    return { ok: false, error: sprintResult.error };
+  }
+
+  if (!sprintResult.sprint) {
     return {
       ok: true,
       context: {
-        projectKey: projectResult.project.key,
-        projectName: projectResult.project.name,
+        projectKey,
         boardId: selectedBoard.id,
         boardName: selectedBoard.name,
       },
       sprint: null,
       issues: [],
       changelogsByKey: {},
-      limitations: [
-        ...limitations,
-        `No active sprint on board "${selectedBoard.name}". Start a sprint on the Platform board, then refresh.`,
-      ],
+      limitations: ["No active sprint was found on the selected board."],
     };
   }
 
-  const issuesResult = await fetchSprintIssues(sprint.id);
+  const issuesResult = await fetchSprintIssues(sprintResult.sprint.id);
   if (!issuesResult.ok) {
-    return {
-      ok: false,
-      error: issuesResult.error,
-      detail: `Sprint issue fetch failed for sprint ${sprint.id}.`,
-    };
+    return { ok: false, error: issuesResult.error };
   }
 
   const changelogResult = await fetchChangelogsForIssues(issuesResult.issues);
+  const limitations = [];
   if (issuesResult.truncated) {
     limitations.push(
       `Sprint issue list truncated at ${MAX_SPRINT_ISSUES} issues.`,
@@ -326,12 +214,11 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
   return {
     ok: true,
     context: {
-      projectKey: projectResult.project.key,
-      projectName: projectResult.project.name,
+      projectKey,
       boardId: selectedBoard.id,
       boardName: selectedBoard.name,
     },
-    sprint,
+    sprint: sprintResult.sprint,
     issues: issuesResult.issues,
     changelogsByKey: changelogResult.changelogsByKey,
     limitations,

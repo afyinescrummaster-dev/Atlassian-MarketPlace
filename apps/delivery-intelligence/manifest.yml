@@ -7,15 +7,6 @@ modules:
       title: Delivery Intelligence
       layout: blank
       icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
-  jira:adminPage:
-    - key: delivery-intelligence-configure
-      resource: dashboard
-      resolver:
-        function: resolver
-      title: Delivery Intelligence
-      layout: blank
-      useAsConfig: true
-      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
   rovo:agent:
     - key: delivery-intelligence-agent
       name: Delivery Intelligence

@@ -25,11 +25,7 @@ export const buildSnapshotForProject = async ({
 }) => {
   const loaded = await loadDeliveryContext({ projectKey, boardId });
   if (!loaded.ok) {
-    return {
-      ok: false,
-      error: loaded.error,
-      detail: loaded.detail || null,
-    };
+    return { ok: false, error: loaded.error };
   }
 
   if (!loaded.sprint) {
@@ -67,10 +63,7 @@ export const buildSnapshotForProject = async ({
     ok: true,
     snapshot: {
       ...snapshot,
-      limitations: [
-        ...(snapshot.limitations || []),
-        ...(loaded.limitations || []),
-      ],
+      limitations: [...(snapshot.limitations || []), ...(loaded.limitations || [])],
     },
   };
 };
@@ -83,19 +76,13 @@ export const registerDeliveryResolvers = (resolver) => {
     }
 
     try {
-      return await buildSnapshotForProject({
+      const result = await buildSnapshotForProject({
         projectKey,
         boardId: payload?.boardId || null,
       });
-    } catch (error) {
-      return {
-        ok: false,
-        error: "unavailable",
-        detail:
-          typeof error?.message === "string"
-            ? error.message.slice(0, 200)
-            : "Unexpected resolver failure.",
-      };
+      return result;
+    } catch {
+      return { ok: false, error: "unavailable" };
     }
   });
 };
