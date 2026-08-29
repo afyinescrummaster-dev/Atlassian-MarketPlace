@@ -53,6 +53,8 @@ export default function App() {
   const [error, setError] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
   const [projectKey, setProjectKey] = useState(null);
+  const [projectInput, setProjectInput] = useState("PLAT");
+  const [needsProject, setNeedsProject] = useState(false);
   const [rovoEnabled, setRovoEnabled] = useState(null);
   const [aiMessage, setAiMessage] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,11 +70,27 @@ export default function App() {
         if (cancelled) {
           return;
         }
-        const key =
+
+        const fromContext =
           context?.extension?.project?.key ||
           context?.extension?.projectKey ||
           context?.project?.key ||
           null;
+
+        const key = (fromContext || projectKey || projectInput || "")
+          .toString()
+          .trim()
+          .toUpperCase();
+
+        if (!fromContext && !projectKey) {
+          setNeedsProject(true);
+          setStatus("ready");
+          setRefreshing(false);
+          setSnapshot(null);
+          return;
+        }
+
+        setNeedsProject(false);
         setProjectKey(key);
 
         const result = await invoke("getDeliveryHealth", {
@@ -108,7 +126,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [requestId]);
+  }, [requestId, projectKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +149,16 @@ export default function App() {
 
   const refresh = () => {
     setRefreshing(true);
+    setRequestId((value) => value + 1);
+  };
+
+  const loadProject = () => {
+    const next = projectInput.trim().toUpperCase();
+    if (!next) {
+      return;
+    }
+    setRefreshing(true);
+    setProjectKey(next);
     setRequestId((value) => value + 1);
   };
 
@@ -160,7 +188,7 @@ export default function App() {
     }
   };
 
-  if (status === "loading" && !snapshot) {
+  if (status === "loading" && !snapshot && !needsProject) {
     return (
       <div className="state">
         <div className="spinner" />
@@ -177,12 +205,24 @@ export default function App() {
           {error === "permission"
             ? "This app could not read sprint data with the current permissions."
             : error === "missing-project"
-              ? "Open Delivery Intelligence from a Jira project to load sprint context."
+              ? "Enter a Jira Software project key (for example PLAT)."
               : "We couldn’t analyze this sprint right now."}
         </p>
-        <button className="btn primary" type="button" onClick={refresh}>
-          Retry
-        </button>
+        <div className="btn-row" style={{ justifyContent: "center" }}>
+          <input
+            className="search"
+            value={projectInput}
+            onChange={(event) => setProjectInput(event.target.value)}
+            placeholder="Project key"
+            aria-label="Project key"
+          />
+          <button className="btn primary" type="button" onClick={loadProject}>
+            Load project
+          </button>
+          <button className="btn" type="button" onClick={refresh}>
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -200,13 +240,23 @@ export default function App() {
       <header className="header">
         <div>
           <h1>Delivery Intelligence</h1>
-          <div className="meta">{contextLine}</div>
+          <div className="meta">{contextLine || "Choose a project to analyze"}</div>
         </div>
         <div className="btn-row">
+          <input
+            className="search"
+            value={projectInput}
+            onChange={(event) => setProjectInput(event.target.value)}
+            placeholder="Project key"
+            aria-label="Project key"
+          />
+          <button className="btn" type="button" onClick={loadProject}>
+            Load
+          </button>
           <button
             className="btn"
             type="button"
-            disabled={refreshing}
+            disabled={refreshing || !projectKey}
             onClick={refresh}
           >
             {refreshing ? "Refreshing…" : "Refresh"}
@@ -214,12 +264,37 @@ export default function App() {
         </div>
       </header>
 
-      {!snapshot?.sprint ? (
+      {needsProject && !snapshot ? (
+        <article className="card">
+          <strong>Choose a project</strong>
+          <p className="sub">
+            Opened outside a project context (mobile Configure / Connected Apps).
+            Enter a Software project key — Platform board is usually{" "}
+            <strong>PLAT</strong>.
+          </p>
+          <div className="btn-row">
+            <button
+              className="btn primary"
+              type="button"
+              onClick={() => {
+                setProjectInput("PLAT");
+                setRefreshing(true);
+                setProjectKey("PLAT");
+                setRequestId((value) => value + 1);
+              }}
+            >
+              Load PLAT
+            </button>
+          </div>
+        </article>
+      ) : null}
+
+      {!needsProject && !snapshot?.sprint ? (
         <article className="card">
           <strong>No active sprint</strong>
           <p className="sub">
-            Open this page on a Jira Software project with an active sprint on
-            its board. Metrics are not estimated when sprint data is unavailable.
+            Open this on a Jira Software project with an active sprint on its
+            board. Metrics are not estimated when sprint data is unavailable.
           </p>
           {(snapshot?.limitations || []).map((item) => (
             <p className="sub" key={item}>
@@ -227,7 +302,9 @@ export default function App() {
             </p>
           ))}
         </article>
-      ) : (
+      ) : null}
+
+      {snapshot?.sprint ? (
         <>
           <section className="grid-2">
             <article className="card">
@@ -298,7 +375,7 @@ export default function App() {
             )}
           </section>
         </>
-      )}
+      ) : null}
 
       <section className="ai-panel card">
         <div className="kicker">AI actions</div>
