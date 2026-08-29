@@ -24,6 +24,8 @@ drill-downs, current vs previous sprint, distinct Rovo intents.
   Revision: `deploy/di/development/2.16.0`.
   Rollback: `./scripts/rollback-deployment.sh di development 2.16.0`
 - Waiting for live Jira acceptance. Do not merge to `main`.
+- Follow-up: drill-downs now open the Jira issue or the matching
+  JQL issue list. Forge development **2.17.0** from `c154954`.
 
 ### Out of scope (kept out)
 - Dependency intelligence
