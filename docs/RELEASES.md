@@ -32,7 +32,7 @@ Code: `apps/delivery-intelligence/`
 
 | Tag | Date | Commit | What it is |
 |---|---|---|---|
-| `legacy-v0.4.0` | 2026-08-29 | *(see tag)* | Admin Health boxed Custom UI + Project Health + Executive Preview + Issue panel |
+| `legacy-v0.4.0` | 2026-08-29 | `a0c7df4` | Admin Health boxed Custom UI + Project Health + Executive Preview + Issue panel |
 
 App ID: `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`  
 Code: repo root (`manifest.yml`, `src/`, `static/`)
