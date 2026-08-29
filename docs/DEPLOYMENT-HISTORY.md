@@ -1,56 +1,60 @@
 # Deployment history (every recorded Forge deploy)
 
-This is the **development revision log**. Record every Forge deploy here,
-including branch experiments that never reach `main`.
+We just completed a recovery incident that exposed a gap in our Git/Forge
+workflow: Forge 2.8.0 was deployed from an uncommitted dirty tree, so Git
+could not roll back to it later. Recovery is closed. Known-good baseline is
+`di-v0.1.1` → `4f44eb3` → Forge development **2.13.0**.
 
-Official tagged milestones only: **`docs/RELEASES.md`**.
+This file is the **readable development revision log**. Every successful
+Forge deploy must be recorded here. Official milestones stay in
+`docs/RELEASES.md`.
 
-How to deploy and roll back: **`docs/RELEASE-PROCESS.md`**.
+Why this exists: **`docs/DEPLOYMENT-MODEL.md`**  
+Machine log (source of truth): **`docs/deployments.jsonl`**
 
-Last updated: 2026-08-29
+```bash
+# Deploy from a clean SHA that is already on origin; auto-record + tag
+./scripts/forge-deploy.sh di development
 
----
+# Restore a previous Forge version without touching the active workspace
+./scripts/rollback-deployment.sh di development 2.13.0
+```
+
+Deployment revisions are Git tags such as `deploy/di/development/2.13.0`.
+They are CMS snapshots, not official release tags.
+
+Do not guess a rollback into unrecorded 2.1.0–2.12.0 deploys.
+
+<!-- BEGIN DEPLOYMENT-LOG -->
 
 ## Currently deployed (demo site)
 
-| App | Branch | Git SHA | Forge env | Forge version | When (UTC) | Notes |
+| App | Deployment revision | Git SHA | Forge env | Forge version | When (UTC) | Notes |
 |---|---|---|---|---|---|---|
-| Delivery Intelligence | `di-v0.1.1` @ `4f44eb3` (on `main` via `8b570a9`) | `4f44eb315d5cbd9320c42ce150a360bb522c0a44` | `development` | **2.13.0** | 2026-08-29 17:37 | Known-good. UI Build `2.8.0`. PLAT accepted. |
-| Legacy root app | `main` | `a0c7df4` | `development` | **4.8.0** | 2026-08-27 | Admin Health v0.4 boxed UI |
+| Delivery Intelligence | `deploy/di/development/2.15.0` | `ad140e5eaa53` | `development` | **2.15.0** | 2026-08-29T21:14:32Z | Deployed from clean ad140e5eaa53 via scripts/forge-deploy.sh |
+| Legacy root app | `deploy/legacy/development/4.8.0` | `a0c7df4` | `development` | **4.8.0** | 2026-08-27T00:00:00Z | Admin Health v0.4 boxed Custom UI |
 
 Site: `https://one-atlas-qzzp.atlassian.net`
-
----
 
 ## Delivery Intelligence
 
 App ID: `ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026`  
 Code: `apps/delivery-intelligence/`
 
-| When (UTC) | Branch | Git SHA | Env | Forge version | Tree | Result |
-|---|---|---|---|---|---|---|
-| 2026-08-29 17:37 | `recovery/delivery-intelligence-2.8.0` | `4f44eb315d5cbd9320c42ce150a360bb522c0a44` | development | 2.13.0 | clean | Tests 20/20, lint clean. Tagged `di-v0.1.1`. On `main` via `8b570a9`. PLAT: 8 original / 1 added PLAT-33255 / 12.5% / 0 carryover / health 82. |
-| 2026-08-28 02:21 | dirty working tree (ancestor `57c833c`) | **not in Git at deploy time** | development | 2.8.0 | dirty | Accepted PLAT. Later recovered as `4f44eb3`. Lesson: never deploy dirty. |
-| (earlier) | various | unrecorded | development | 2.1.0–2.12.0 | mixed | Incomplete. Do not guess a rollback into this range. |
-
----
+| When (UTC) | Kind | Branch | Git SHA | Env | Forge version | Revision | Result |
+|---|---|---|---|---|---|---|---|
+| 2026-08-29T21:14:32Z | deploy | feature/deployment-history-automation | `ad140e5eaa53` | development | 2.15.0 | `deploy/di/development/2.15.0` | Deployed from clean ad140e5eaa53 via scripts/forge-deploy.sh |
+| 2026-08-29T18:42:25Z | deploy | feature/deployment-history-automation | `f30e2e9c132d` | development | 2.14.0 | `deploy/di/development/2.14.0` | Deployed from clean f30e2e9c132d via scripts/forge-deploy.sh |
+| 2026-08-29T17:37:39Z | historical | recovery/delivery-intelligence-2.8.0 | `4f44eb3` | development | 2.13.0 | `deploy/di/development/2.13.0` | Tests 20/20, lint clean. PLAT accepted: 8 original / 1 added PLAT-33255 / 12.5% / 0 carryover / health 82. Contained in main via 8b570a9. Official known-good: di-v0.1.1. |
+| 2026-08-28T02:21:06Z | historical | dirty-working-tree | `uncommitted` | development | 2.8.0 | `` | Accepted PLAT from uncommitted tree. Recovered later as 4f44eb3. Do not repeat. |
 
 ## Legacy root app
 
 App ID: `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`  
 Code: repo root
 
-| When (UTC) | Branch | Git SHA | Env | Forge version | Tree | Result |
-|---|---|---|---|---|---|---|
-| 2026-08-27 | `main` | `a0c7df4` / `b889874` era | development | 4.8.0 | clean | Admin Health v0.4 boxed Custom UI |
+| When (UTC) | Kind | Branch | Git SHA | Env | Forge version | Revision | Result |
+|---|---|---|---|---|---|---|---|
+| 2026-08-27T00:00:00Z | historical | main | `a0c7df4` | development | 4.8.0 | `deploy/legacy/development/4.8.0` | Admin Health v0.4 boxed Custom UI |
 
----
-
-## How to append a row
-
-After every `forge deploy`, add a row **before** the session is considered
-complete. Required columns: product, branch, full Git SHA, environment,
-Forge version, timestamp, whether the tree was clean, test/lint result.
-
-Do not deploy unless the working tree is clean and HEAD matches the SHA
-you will record.
+<!-- END DEPLOYMENT-LOG -->

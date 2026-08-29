@@ -7,6 +7,22 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-29 — [Process] CMS-style deployment history
+
+### Why
+Forge 2.8.0 was deployed dirty and uncommitted, so Git could not roll
+back. Recovery closed at `di-v0.1.1` / `4f44eb3` / Forge 2.13.0.
+
+### Done
+- Kept `docs/deployments.jsonl`; added deploy tags
+  `deploy/<app>/<env>/<version>`
+- Origin SHA required before deploy
+- Isolated worktree rollback: `./scripts/rollback-deployment.sh`
+- Receipt after success; no record/tag on failure
+- Branch: `feature/deployment-history-automation` (not merged)
+
+---
+
 ## 2026-08-29 — [Delivery Intelligence] tagged known-good `di-v0.1.1`
 
 ### Goal

@@ -5,6 +5,16 @@
 > and important accepted versions receive permanent tags.**
 >
 > **GitHub, not either chat, is the coordination layer between agents.**
+>
+> Never deploy dirty code. Every deployment is recoverable. Deployment
+> history is automatic. `main` is the accepted code line. Official
+> release tags (`di-v0.1.1`) are known-good milestones. Deployment tags
+> (`deploy/di/development/2.14.0`) are ordinary CMS revision history.
+
+We recovered Delivery Intelligence because Forge 2.8.0 was deployed from
+an uncommitted dirty tree. Git could not roll back to it. That source is
+now `di-v0.1.1` @ `4f44eb3` (Forge **2.13.0**). Full story:
+`docs/DEPLOYMENT-MODEL.md` and `docs/RECOVERY-2.8.0.md`.
 
 Before starting work, read these in order:
 
@@ -41,8 +51,8 @@ Installed on `one-atlas-qzzp.atlassian.net`.
 change that ID.
 
 1. For Delivery Intelligence: read `docs/products/delivery-intelligence.md` first.
-2. DI is already registered. Deploy from `apps/delivery-intelligence/` only.
-3. Legacy deploy unchanged: `npm run lint:code && npm test && npm run build && forge deploy -e development --non-interactive`
+2. DI is already registered. Deploy with `./scripts/forge-deploy.sh di development`.
+3. Legacy deploy: `./scripts/forge-deploy.sh legacy development`
 4. Do not change registered Forge app IDs.
 
 ---
@@ -60,8 +70,10 @@ Never deploy a dirty working tree. Forge deployments must always map to
 an exact Git commit SHA.
 
 **3. Every test deployment is recoverable — even before `main`.**  
-For every Forge development deployment, record in
-`docs/DEPLOYMENT-HISTORY.md`:
+Use `./scripts/forge-deploy.sh <di|legacy> development`. It refuses a
+dirty tree, requires the SHA to already be on origin, deploys, tags
+`deploy/<app>/<env>/<forgeVersion>`, pushes that tag, and writes
+`docs/deployments.jsonl`. Record:
 
 - app/product
 - branch
@@ -83,16 +95,19 @@ A development deployment only means “available for testing.”
 **6. Tested + accepted → merge to `main`.**  
 Once the user verifies a build, that branch can be merged into `main`.
 
-**7. `main` is the current accepted line; tags preserve historical
+**7. `main` is the current accepted line; official tags preserve
 known-good milestones.**  
 After an important accepted merge, create a product-specific tag such as
-`di-v0.1.1` when the user names it. Tags are permanent save points.
-`main` continues moving forward.
+`di-v0.1.1` when the user names it. Those are permanent save points.
+`main` continues moving forward. Deployment tags
+(`deploy/di/development/2.14.0`) are automatic and are **not** releases.
 
 **8. Development history and release history are different.**  
-Development history (`docs/DEPLOYMENT-HISTORY.md`): every deployed test
-revision. Release history (`docs/RELEASES.md`): only accepted/tagged
-milestones. Do not clutter official release tags with every experiment.
+Development history (`docs/deployments.jsonl` / generated
+`docs/DEPLOYMENT-HISTORY.md`): every deployed test revision, including
+those that never reach `main`. Release history (`docs/RELEASES.md`):
+only accepted/tagged milestones. Do not clutter official release tags
+with every experiment.
 
 **9. Forge environments have distinct purposes.**
 
@@ -104,8 +119,9 @@ milestones. Do not clutter official release tags with every experiment.
 Active work remains in `development` until the user says otherwise.
 
 **10. Never guess a rollback point.**  
-Rollback must reference an exact recorded Git SHA or tag and the
-corresponding Forge deployment.
+Use `./scripts/rollback-deployment.sh di development 2.13.0`. It resolves
+the recorded SHA, deploys from an isolated worktree, and records a new
+history event. It must not checkout or reset the active workspace.
 
 **11. Do not overwrite working environments blindly.**  
 Before deploying, know what Git SHA and Forge version are currently
@@ -122,7 +138,8 @@ deployed so we can restore it. Read `docs/DEPLOYMENT-HISTORY.md` first.
 - whether the working tree was clean
 - whether files changed during build
 
-Then append the same facts to `docs/DEPLOYMENT-HISTORY.md`.
+Then commit the updated `docs/deployments.jsonl` and
+`docs/DEPLOYMENT-HISTORY.md`.
 
 **13. Mobile and desktop chats must share the same source of truth.**  
 Neither chat should rely solely on conversation memory. Before making
