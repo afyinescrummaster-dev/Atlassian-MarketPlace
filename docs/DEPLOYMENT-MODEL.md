@@ -28,7 +28,9 @@ Current verified baseline:
 - Forge development: 2.13.0
 - PLAT accepted: 8 original / 1 added PLAT-33255 / 12.5% / 0 carryover / health 82
 
-That recovery is now closed.
+That recovery is now closed. Product milestone **V1 — Sprint Health +
+Rovo Intelligence** is `di-v1.0.0` @ `c780ff5`. `di-v0.1.1` remains
+the historical recovered known-good tag.
 
 The lesson: Git itself was not the problem. The problem was that a visible
 Forge deployment could exist without an immutable Git revision behind it.

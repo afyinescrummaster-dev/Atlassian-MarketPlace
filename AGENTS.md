@@ -8,13 +8,14 @@
 >
 > Never deploy dirty code. Every deployment is recoverable. Deployment
 > history is automatic. `main` is the accepted code line. Official
-> release tags (`di-v0.1.1`) are known-good milestones. Deployment tags
-> (`deploy/di/development/2.14.0`) are ordinary CMS revision history.
+> release tags (`di-v1.0.0`) are known-good milestones. Deployment tags
+> (`deploy/di/development/2.15.0`) are ordinary CMS revision history.
 
-We recovered Delivery Intelligence because Forge 2.8.0 was deployed from
-an uncommitted dirty tree. Git could not roll back to it. That source is
-now `di-v0.1.1` @ `4f44eb3` (Forge **2.13.0**). Full story:
-`docs/DEPLOYMENT-MODEL.md` and `docs/RECOVERY-2.8.0.md`.
+**Delivery Intelligence V1 — Sprint Health + Rovo Intelligence** is
+`di-v1.0.0` @ `c780ff5`. Compare future major work against that tag.
+`di-v0.1.1` @ `4f44eb3` remains the historical recovered known-good
+build. Do not delete or rewrite it. Story: `docs/DEPLOYMENT-MODEL.md`
+and `docs/RECOVERY-2.8.0.md`.
 
 Before starting work, read these in order:
 
@@ -32,16 +33,19 @@ GitHub plus these files are the durable memory. Fetch and inspect remote
 state before changing or deploying. Do not invent release tags; the user
 names them.
 
-## Status (2026-08-29) — recovery closed; `di-v0.1.1` is known-good
+## Status (2026-08-29) — V1 milestone `di-v1.0.0`
 
-**Known-good Delivery Intelligence:** tag `di-v0.1.1` → Git `4f44eb3` →
-contained in `main` via `8b570a9` → Forge development **2.13.0** →
-PLAT accepted.
+**Current product milestone:** `di-v1.0.0` — Sprint Health + Rovo
+Intelligence → Git `c780ff5462fb9c74fa8cbba37f5a104d5401a524`
+(merge of recovered source + CMS deploy/rollback). Live Forge
+development **2.15.0**.
 
-`di-v0.1.0` and `7743ec7` are **not** that source. Story:
-`docs/RECOVERY-2.8.0.md`.
+**Historical recovered known-good:** `di-v0.1.1` → `4f44eb3` → Forge
+**2.13.0** → PLAT accepted. Keep this tag.
 
-**Delivery Intelligence v0.1** is a **separate Forge app**
+`di-v0.1.0` and `7743ec7` are **not** the verified 2.8.0 source.
+
+**Delivery Intelligence V1** is a **separate Forge app**
 (`apps/delivery-intelligence/`), registered as
 `ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026`.
 Installed on `one-atlas-qzzp.atlassian.net`.

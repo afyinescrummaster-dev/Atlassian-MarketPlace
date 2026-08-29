@@ -7,6 +7,21 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-29 — [Delivery Intelligence] V1 milestone `di-v1.0.0`
+
+### Goal
+Merge deployment-history automation and tag V1: Sprint Health + Rovo
+Intelligence.
+
+### Done
+- Merged `feature/deployment-history-automation` into `main` (`c780ff5`)
+- Tagged `di-v1.0.0` at that merge. Did not rewrite `di-v0.1.1`.
+- V1 includes deterministic sprint health, commitment/scope/carryover,
+  blocked/stale, health score, Rovo actions, recovered baseline, and
+  CMS deploy/rollback.
+
+---
+
 ## 2026-08-29 — [Process] CMS-style deployment history
 
 ### Why

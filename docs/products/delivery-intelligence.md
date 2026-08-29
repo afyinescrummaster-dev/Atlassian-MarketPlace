@@ -1,12 +1,13 @@
 # Delivery Intelligence for Jira
 
 Working product name: **Delivery Intelligence for Jira**  
-Version: **0.1.0** (read-only MVP)  
+Version: **1.0.0** — Sprint Health + Rovo Intelligence  
 Forge app location: `apps/delivery-intelligence/`  
-Status: **Known-good `di-v0.1.1`.** Git `4f44eb3`, on `main` via
-`8b570a9`, Forge development **2.13.0** (UI Build `2.8.0`).
-`di-v0.1.0` is not this source. See `docs/RECOVERY-2.8.0.md`.
-Working rules: `AGENTS.md`. Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
+Status: **V1 milestone `di-v1.0.0`** @ `c780ff5`. Live Forge
+development **2.15.0** (UI Build still `2.8.0`). Historical recovered
+known-good remains `di-v0.1.1` @ `4f44eb3` — do not delete.
+See `docs/RECOVERY-2.8.0.md`. Working rules: `AGENTS.md`.
+Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
 
 Forge app ID:
 
@@ -23,6 +24,27 @@ scope changed after sprint start, what carried over, and what needs attention.
 Leaders want concise risk explanations without manual spreadsheet work.
 
 This product answers: **What needs attention in the current sprint, and why?**
+
+---
+
+## V1 milestone — Sprint Health + Rovo Intelligence
+
+Official tag: **`di-v1.0.0`** (`c780ff5`). Future major work compares
+against this baseline. `di-v0.1.1` stays as historical recovered
+known-good proof.
+
+V1 includes:
+
+- Deterministic sprint health
+- Original sprint commitment reconstruction
+- Scope growth detection
+- Carryover logic
+- Blocked and stale work detection
+- Health score
+- Rovo explanation / recommendation / leadership brief
+- Verified PLAT acceptance behavior
+- Clean Git recovery baseline
+- CMS-style Forge deployment history and rollback
 
 ---
 

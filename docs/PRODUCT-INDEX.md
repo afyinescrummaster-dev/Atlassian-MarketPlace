@@ -6,7 +6,7 @@ for global Forge constraints. Then open **one product doc**. Check
 
 | Working on… | Read first | Code roots | Forge app |
 |---|---|---|---|
-| **Delivery Intelligence** (new) | `docs/products/delivery-intelligence.md` | `apps/delivery-intelligence/` | Separate app — known-good `di-v0.1.1` @ `4f44eb3` (Forge **2.13.0**). `di-v0.1.0` is not that source. |
+| **Delivery Intelligence** (new) | `docs/products/delivery-intelligence.md` | `apps/delivery-intelligence/` | Separate app — V1 `di-v1.0.0` @ `c780ff5`. Historical recovered known-good: `di-v0.1.1` @ `4f44eb3`. |
 | Jira Admin Health | `docs/products/admin-health.md` | `src/admin-health/`, `static/admin-health/` | Legacy app (`manifest.yml` at repo root) |
 | Executive Preview | `docs/products/executive-preview.md` | `src/report/`, `static/executive-preview/` | Legacy app |
 | Project Health | `docs/products/project-health.md` | `src/frontend/project-report.jsx` | Legacy app |
