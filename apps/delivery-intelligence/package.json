@@ -13,7 +13,6 @@
     "validate": "npm run build && forge lint"
   },
   "dependencies": {
-    "@atlassian-marketplace/shared-jira": "file:../../packages/shared-jira",
     "@forge/api": "^8.0.4",
     "@forge/resolver": "^2.0.0"
   },

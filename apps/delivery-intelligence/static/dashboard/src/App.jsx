@@ -48,9 +48,26 @@ FACTS:
 ${JSON.stringify(facts, null, 2)}`;
 };
 
+const errorCopy = (code, detail) => {
+  if (code === "permission") {
+    return "This app could not read sprint data with the current permissions.";
+  }
+  if (code === "missing-project") {
+    return "Enter a Jira Software project key (for example the Platform project key).";
+  }
+  if (code === "project-not-found") {
+    return "No Jira project was found for that key. Check the project key and try again.";
+  }
+  if (detail) {
+    return `We couldn’t analyze this sprint right now. ${detail}`;
+  }
+  return "We couldn’t analyze this sprint right now.";
+};
+
 export default function App() {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
+  const [errorDetail, setErrorDetail] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
   const [projectKey, setProjectKey] = useState(null);
   const [projectInput, setProjectInput] = useState("PLAT");
@@ -65,6 +82,7 @@ export default function App() {
 
     const run = async () => {
       setError(null);
+      setErrorDetail(null);
       try {
         const context = await view.getContext();
         if (cancelled) {
@@ -76,6 +94,10 @@ export default function App() {
           context?.extension?.projectKey ||
           context?.project?.key ||
           null;
+
+        if (fromContext) {
+          setProjectInput(String(fromContext).toUpperCase());
+        }
 
         const key = (fromContext || projectKey || projectInput || "")
           .toString()
@@ -109,14 +131,18 @@ export default function App() {
 
         setSnapshot(null);
         setError(result?.error || "unavailable");
+        setErrorDetail(result?.detail || null);
         setStatus("error");
         setRefreshing(false);
-      } catch {
+      } catch (err) {
         if (cancelled) {
           return;
         }
         setSnapshot(null);
         setError("unavailable");
+        setErrorDetail(
+          typeof err?.message === "string" ? err.message.slice(0, 200) : null,
+        );
         setStatus("error");
         setRefreshing(false);
       }
@@ -201,13 +227,7 @@ export default function App() {
     return (
       <div className="state">
         <h2>Delivery Intelligence</h2>
-        <p className="sub">
-          {error === "permission"
-            ? "This app could not read sprint data with the current permissions."
-            : error === "missing-project"
-              ? "Enter a Jira Software project key (for example PLAT)."
-              : "We couldn’t analyze this sprint right now."}
-        </p>
+        <p className="sub">{errorCopy(error, errorDetail)}</p>
         <div className="btn-row" style={{ justifyContent: "center" }}>
           <input
             className="search"
@@ -268,22 +288,15 @@ export default function App() {
         <article className="card">
           <strong>Choose a project</strong>
           <p className="sub">
-            Opened outside a project context (mobile Configure / Connected Apps).
-            Enter a Software project key — Platform board is usually{" "}
-            <strong>PLAT</strong>.
+            Enter a Software project key for the Platform board, then tap Load.
           </p>
           <div className="btn-row">
             <button
               className="btn primary"
               type="button"
-              onClick={() => {
-                setProjectInput("PLAT");
-                setRefreshing(true);
-                setProjectKey("PLAT");
-                setRequestId((value) => value + 1);
-              }}
+              onClick={loadProject}
             >
-              Load PLAT
+              Load project
             </button>
           </div>
         </article>
