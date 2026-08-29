@@ -21,7 +21,7 @@ Site: `https://one-atlas-qzzp.atlassian.net`
 
 | Tag | Date | Commit | What it is |
 |---|---|---|---|
-| `di-v0.1.0` | 2026-08-29 | `7743ec7` | Read-only sprint dashboard + Rovo agent; last known-good desktop build |
+| `di-v0.1.0` | 2026-08-29 | `a29a5aa` | Read-only sprint dashboard + Rovo agent; last known-good desktop build |
 
 App ID: `ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026`  
 Code: `apps/delivery-intelligence/`
