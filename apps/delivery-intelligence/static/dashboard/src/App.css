@@ -216,7 +216,17 @@
   grid-template-columns: 110px 1fr;
   gap: 12px;
   padding: 10px 0;
+  border: 0;
   border-top: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+  width: 100%;
+  border-radius: 0;
+}
+
+.issue-row:hover .issue-key {
+  color: var(--primary);
+  text-decoration: underline;
 }
 
 .issue-row:first-child {

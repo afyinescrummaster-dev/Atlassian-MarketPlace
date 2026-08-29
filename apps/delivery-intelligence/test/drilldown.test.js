@@ -7,6 +7,12 @@ import {
   computeStale,
 } from "../src/delivery-intelligence/metrics.js";
 import { buildTopAnomalies } from "../src/delivery-intelligence/analyze.js";
+import {
+  cardsFromIssuesOrKeys,
+  jiraPathForKeys,
+  jqlForIssueKeys,
+  jqlForSprint,
+} from "../src/delivery-intelligence/jira-links.js";
 
 const sprint = {
   id: 42,
@@ -207,4 +213,20 @@ test("attention items stay deterministic and preserve severity order", () => {
   assert.equal(completion.title, "Low completion");
   assert.equal(completion.explanation, "0 of 13 issues are Done.");
   assert.equal(completion.suggestedAction, "View sprint issues");
+});
+
+test("one issue opens browse and several issues open a JQL list", () => {
+  assert.equal(jiraPathForKeys(["PLAT-39"]), "/browse/PLAT-39");
+  assert.equal(jqlForIssueKeys(["PLAT-1", "PLAT-33255"]), "key in (PLAT-1, PLAT-33255) ORDER BY key");
+  assert.equal(
+    jiraPathForKeys(["PLAT-1", "PLAT-33255"]),
+    `/issues/?jql=${encodeURIComponent("key in (PLAT-1, PLAT-33255) ORDER BY key")}`,
+  );
+  assert.equal(
+    jqlForSprint("PLAT", 42),
+    "project = PLAT AND sprint = 42 ORDER BY key",
+  );
+  const fromKeys = cardsFromIssuesOrKeys([], ["PLAT-33255"], "Added after sprint start");
+  assert.equal(fromKeys[0].key, "PLAT-33255");
+  assert.equal(fromKeys[0].reason, "Added after sprint start");
 });

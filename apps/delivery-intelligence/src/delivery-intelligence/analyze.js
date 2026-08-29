@@ -311,6 +311,7 @@ export const buildHealthSnapshot = ({
     scopeChangePercent: scope.scopeChangePercent,
     originalCommittedCount: scope.originalCommittedCount,
     currentIssueCount: scope.currentIssueCount ?? completion.totalCount,
+    currentIssueKeys: (issues || []).map((issue) => issue.key).filter(Boolean),
     addedIssueCount: scope.addedIssueCount,
     originalCommittedIssueKeys: scope.originalCommittedIssueKeys,
     originalCommittedIssues: scope.originalCommittedIssues,

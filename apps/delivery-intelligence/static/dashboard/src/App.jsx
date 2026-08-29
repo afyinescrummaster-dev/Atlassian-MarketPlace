@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { invoke, rovo, view } from "@forge/bridge";
+import { invoke, router, rovo, view } from "@forge/bridge";
 import {
   ROVO_INTENTS,
   buildUserPrompt,
 } from "../../../src/delivery-intelligence/rovo-intents.js";
+import {
+  cardsFromIssuesOrKeys,
+  jiraPathForJql,
+  jiraPathForKeys,
+  jqlForSprint,
+} from "../../../src/delivery-intelligence/jira-links.js";
 import "./App.css";
 
 const AGENT_KEY = "delivery-intelligence-agent";
 const AGENT_NAME = "Delivery Intelligence";
-const UI_BUILD = "2.9.0";
+const UI_BUILD = "2.9.1";
 
 const formatMetric = (value, suffix = "") => {
   if (value == null || Number.isNaN(value)) {
@@ -69,7 +75,7 @@ const directionLabel = (direction) => {
   return "Unavailable";
 };
 
-const IssueRow = ({ issue }) => {
+const IssueRow = ({ issue, onOpen }) => {
   const parts = [issue.statusName, issue.reason].filter(Boolean);
   if (issue.ageDays != null) {
     const unit = ` ${issue.ageDays} day${issue.ageDays === 1 ? "" : "s"}`;
@@ -87,36 +93,43 @@ const IssueRow = ({ issue }) => {
   }
 
   return (
-    <div className="issue-row">
+    <button className="issue-row" type="button" onClick={() => onOpen(issue.key)}>
       <div className="issue-key">{issue.key}</div>
       <div className="issue-body">
-        <div className="issue-summary">{issue.summary || "No summary"}</div>
+        <div className="issue-summary">{issue.summary || "Open this issue in Jira"}</div>
         <div className="issue-meta">{parts.join(" · ")}</div>
       </div>
-    </div>
+    </button>
   );
 };
 
-const IssueList = ({ issues, empty }) => {
+const IssueList = ({ issues, empty, onOpen }) => {
   if (!issues?.length) {
     return <p className="sub">{empty}</p>;
   }
   return (
     <div className="issue-list">
       {issues.map((issue) => (
-        <IssueRow key={issue.key} issue={issue} />
+        <IssueRow key={issue.key} issue={issue} onOpen={onOpen} />
       ))}
     </div>
   );
 };
 
-const DrilldownPanel = ({ title, children, onClose }) => (
+const DrilldownPanel = ({ title, onClose, onOpenJira, canOpenJira, children }) => (
   <article className="card drilldown">
     <div className="drilldown-head">
       <strong>{title}</strong>
-      <button className="btn" type="button" onClick={onClose}>
-        Close
-      </button>
+      <div className="btn-row">
+        {canOpenJira ? (
+          <button className="btn primary" type="button" onClick={onOpenJira}>
+            Open in Jira
+          </button>
+        ) : null}
+        <button className="btn" type="button" onClick={onClose}>
+          Close
+        </button>
+      </div>
     </div>
     {children}
   </article>
@@ -132,6 +145,7 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [requestId, setRequestId] = useState(0);
   const [drilldown, setDrilldown] = useState(null);
+  const [navMessage, setNavMessage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -209,8 +223,24 @@ export default function App() {
     setRequestId((value) => value + 1);
   };
 
-  const toggleDrilldown = (id) => {
-    setDrilldown((current) => (current === id ? null : id));
+  const openJiraPath = async (path) => {
+    if (!path) {
+      return false;
+    }
+    await router.open(path);
+    return true;
+  };
+
+  const openIssue = async (issueKey) => {
+    if (!issueKey) {
+      return;
+    }
+    setNavMessage(null);
+    try {
+      await openJiraPath(`/browse/${issueKey}`);
+    } catch {
+      setNavMessage(`Could not open ${issueKey} in Jira.`);
+    }
   };
 
   const openRovo = async (intent) => {
@@ -256,15 +286,69 @@ export default function App() {
       return {};
     }
     return {
-      original: snapshot.originalCommittedIssues || [],
-      added: snapshot.addedIssues || [],
-      blocked: snapshot.blockedIssues || [],
-      carryover: snapshot.carryoverIssues || [],
-      stale: snapshot.staleIssues || [],
-      done: snapshot.doneIssues || [],
-      open: snapshot.openIssues || [],
+      original: cardsFromIssuesOrKeys(
+        snapshot.originalCommittedIssues,
+        snapshot.originalCommittedIssueKeys,
+        "Original commitment",
+      ),
+      added: cardsFromIssuesOrKeys(
+        snapshot.addedIssues,
+        snapshot.addedIssueKeys,
+        "Added after sprint start",
+      ),
+      blocked: cardsFromIssuesOrKeys(
+        snapshot.blockedIssues,
+        snapshot.blockedIssues?.map((row) => row.key),
+        "Blocked",
+      ),
+      carryover: cardsFromIssuesOrKeys(
+        snapshot.carryoverIssues,
+        snapshot.carryoverIssueKeys,
+        "Carried from the previous completed sprint",
+      ),
+      stale: cardsFromIssuesOrKeys(
+        snapshot.staleIssues,
+        snapshot.staleIssues?.map((row) => row.key),
+        "Stale",
+      ),
+      done: cardsFromIssuesOrKeys(snapshot.doneIssues, [], "Done"),
+      open: cardsFromIssuesOrKeys(snapshot.openIssues, [], "Open"),
+      current: cardsFromIssuesOrKeys(
+        [...(snapshot.doneIssues || []), ...(snapshot.openIssues || [])],
+        snapshot.currentIssueKeys,
+        "Current sprint issue",
+      ),
     };
   }, [snapshot]);
+
+  const pathForDrilldown = (id, issueKey = null) => {
+    if (issueKey) {
+      return `/browse/${issueKey}`;
+    }
+    if (id === "completion") {
+      return (
+        jiraPathForJql(
+          jqlForSprint(snapshot?.context?.projectKey, snapshot?.sprint?.id),
+        ) || jiraPathForKeys([...(lists.done || []), ...(lists.open || [])].map((row) => row.key))
+      );
+    }
+    const issues = lists[id] || [];
+    return jiraPathForKeys(issues.map((row) => row.key));
+  };
+
+  const openMetric = async (id, issueKey = null) => {
+    setDrilldown(id);
+    const path = pathForDrilldown(id, issueKey);
+    if (!path) {
+      return;
+    }
+    setNavMessage(null);
+    try {
+      await openJiraPath(path);
+    } catch {
+      setNavMessage("Could not open Jira. Use the issue links below.");
+    }
+  };
 
   if (status === "loading" && !snapshot) {
     return (
@@ -310,15 +394,28 @@ export default function App() {
     }
     if (id === "completion") {
       return (
-        <DrilldownPanel title="Sprint issues" onClose={() => setDrilldown(null)}>
+        <DrilldownPanel
+          title="Sprint issues"
+          onClose={() => setDrilldown(null)}
+          canOpenJira={Boolean(pathForDrilldown("completion"))}
+          onOpenJira={() => openMetric("completion")}
+        >
           <div className="split-lists">
             <div>
               <div className="kicker">Done ({lists.done.length})</div>
-              <IssueList issues={lists.done} empty="No Done issues in this sprint." />
+              <IssueList
+                issues={lists.done}
+                empty="No Done issues in this sprint."
+                onOpen={openIssue}
+              />
             </div>
             <div>
               <div className="kicker">Open ({lists.open.length})</div>
-              <IssueList issues={lists.open} empty="No open issues in this sprint." />
+              <IssueList
+                issues={lists.open}
+                empty="No open issues in this sprint."
+                onOpen={openIssue}
+              />
             </div>
           </div>
         </DrilldownPanel>
@@ -358,8 +455,13 @@ export default function App() {
     }
 
     return (
-      <DrilldownPanel title={config.title} onClose={() => setDrilldown(null)}>
-        <IssueList issues={config.issues} empty={config.empty} />
+      <DrilldownPanel
+        title={config.title}
+        onClose={() => setDrilldown(null)}
+        canOpenJira={Boolean(pathForDrilldown(id))}
+        onOpenJira={() => openMetric(id)}
+      >
+        <IssueList issues={config.issues} empty={config.empty} onOpen={openIssue} />
       </DrilldownPanel>
     );
   };
@@ -442,7 +544,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "completion" ? "active" : ""}`}
                 type="button"
-                onClick={() => toggleDrilldown("completion")}
+                onClick={() => openMetric("completion")}
               >
                 <div className="n">{formatMetric(snapshot.completionPercent, "%")}</div>
                 <div className="l">Completion</div>
@@ -450,7 +552,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "added" ? "active" : ""}`}
                 type="button"
-                onClick={() => toggleDrilldown("added")}
+                onClick={() => openMetric("added")}
               >
                 <div className="n">{formatMetric(snapshot.scopeChangePercent, "%")}</div>
                 <div className="l">Scope change</div>
@@ -458,7 +560,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "carryover" ? "active" : ""}`}
                 type="button"
-                onClick={() => toggleDrilldown("carryover")}
+                onClick={() => openMetric("carryover")}
               >
                 <div className="n">{formatMetric(snapshot.carryoverCount)}</div>
                 <div className="l">Carryover</div>
@@ -466,7 +568,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "blocked" ? "active" : ""}`}
                 type="button"
-                onClick={() => toggleDrilldown("blocked")}
+                onClick={() => openMetric("blocked")}
               >
                 <div className="n">{formatMetric(snapshot.blockedCount)}</div>
                 <div className="l">Blocked</div>
@@ -474,7 +576,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "stale" ? "active" : ""}`}
                 type="button"
-                onClick={() => toggleDrilldown("stale")}
+                onClick={() => openMetric("stale")}
               >
                 <div className="n">{formatMetric(snapshot.staleCount)}</div>
                 <div className="l">Stale</div>
@@ -494,7 +596,7 @@ export default function App() {
                 <button
                   className={`scope-stat ${drilldown === "original" ? "active" : ""}`}
                   type="button"
-                  onClick={() => toggleDrilldown("original")}
+                  onClick={() => openMetric("original")}
                 >
                   <div className="n">{formatMetric(snapshot.originalCommittedCount)}</div>
                   <div className="l">Original commitment</div>
@@ -502,19 +604,23 @@ export default function App() {
                 <button
                   className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
                   type="button"
-                  onClick={() => toggleDrilldown("added")}
+                  onClick={() => openMetric("added")}
                 >
                   <div className="n">{formatMetric(snapshot.addedIssueCount)}</div>
                   <div className="l">Added after start</div>
                 </button>
-                <div className="scope-stat">
+                <button
+                  className={`scope-stat ${drilldown === "completion" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => openMetric("completion")}
+                >
                   <div className="n">{formatMetric(snapshot.currentIssueCount)}</div>
                   <div className="l">Current scope</div>
-                </div>
+                </button>
                 <button
                   className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
                   type="button"
-                  onClick={() => toggleDrilldown("added")}
+                  onClick={() => openMetric("added")}
                 >
                   <div className="n">{formatSigned(snapshot.scopeChangePercent, "%")}</div>
                   <div className="l">Scope growth</div>
@@ -528,20 +634,21 @@ export default function App() {
                 <button
                   className="btn"
                   type="button"
-                  onClick={() => toggleDrilldown("original")}
+                  onClick={() => openMetric("original")}
                 >
                   View original commitment
                 </button>
                 <button
                   className="btn primary"
                   type="button"
-                  onClick={() => toggleDrilldown("added")}
+                  onClick={() => openMetric("added")}
                 >
                   View added issues
                 </button>
               </div>
             </article>
             {["original", "added"].includes(drilldown) ? renderDrilldown(drilldown) : null}
+            {navMessage ? <p className="note">{navMessage}</p> : null}
           </section>
 
           <section>
@@ -573,7 +680,7 @@ export default function App() {
                     <button
                       className="btn"
                       type="button"
-                      onClick={() => toggleDrilldown(item.drillDown)}
+                      onClick={() => openMetric(item.drillDown, item.issueKey)}
                     >
                       {item.suggestedAction}
                     </button>
@@ -584,6 +691,9 @@ export default function App() {
             {drilldown && !["original", "added"].includes(drilldown)
               ? renderDrilldown(drilldown)
               : null}
+            {navMessage && !["original", "added"].includes(drilldown) ? (
+              <p className="note">{navMessage}</p>
+            ) : null}
           </section>
 
           <section>
