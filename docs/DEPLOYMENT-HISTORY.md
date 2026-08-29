@@ -31,7 +31,7 @@ Do not guess a rollback into unrecorded 2.1.0–2.12.0 deploys.
 
 | App | Deployment revision | Git SHA | Forge env | Forge version | When (UTC) | Notes |
 |---|---|---|---|---|---|---|
-| Delivery Intelligence | `deploy/di/development/2.17.0` | `c154954de1ae` | `development` | **2.17.0** | 2026-08-29T21:56:48Z | Deployed from clean c154954de1ae via scripts/forge-deploy.sh |
+| Delivery Intelligence | `deploy/di/development/2.18.0` | `4bb252d9c4f2` | `development` | **2.18.0** | 2026-08-29T22:04:47Z | Deployed from clean 4bb252d9c4f2 via scripts/forge-deploy.sh |
 | Legacy root app | `deploy/legacy/development/4.8.0` | `a0c7df4` | `development` | **4.8.0** | 2026-08-27T00:00:00Z | Admin Health v0.4 boxed Custom UI |
 
 Site: `https://one-atlas-qzzp.atlassian.net`
@@ -43,6 +43,7 @@ Code: `apps/delivery-intelligence/`
 
 | When (UTC) | Kind | Branch | Git SHA | Env | Forge version | Revision | Result |
 |---|---|---|---|---|---|---|---|
+| 2026-08-29T22:04:47Z | deploy | feature/sprint-intelligence-core | `4bb252d9c4f2` | development | 2.18.0 | `deploy/di/development/2.18.0` | Deployed from clean 4bb252d9c4f2 via scripts/forge-deploy.sh |
 | 2026-08-29T21:56:48Z | deploy | feature/sprint-intelligence-core | `c154954de1ae` | development | 2.17.0 | `deploy/di/development/2.17.0` | Deployed from clean c154954de1ae via scripts/forge-deploy.sh |
 | 2026-08-29T21:36:52Z | deploy | feature/sprint-intelligence-core | `1523b754c90b` | development | 2.16.0 | `deploy/di/development/2.16.0` | Deployed from clean 1523b754c90b via scripts/forge-deploy.sh |
 | 2026-08-29T21:14:32Z | deploy | feature/deployment-history-automation | `ad140e5eaa53` | development | 2.15.0 | `deploy/di/development/2.15.0` | Deployed from clean ad140e5eaa53 via scripts/forge-deploy.sh |
