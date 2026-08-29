@@ -3,7 +3,7 @@
 This file is the handoff for Cursor mobile or a remote agent. Read it before
 changing the Forge app. Do not invent missing Jira fields or sample metrics.
 
-Last updated: 2026-08-27
+Last updated: 2026-08-29
 
 ## What this repo is
 
@@ -18,7 +18,11 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
-- Delivery Intelligence (separate app): development **2.8.0**
+- Delivery Intelligence (separate app): recovered 2.8.0 source is
+  `recovery/delivery-intelligence-2.8.0` @ `4f44eb3`; verification
+  deploy is development **2.13.0**. `origin/main` rollback `7743ec7`
+  and tag `di-v0.1.0` are **not** that source. See
+  `docs/RECOVERY-2.8.0.md`. Formal process will be updated shortly.
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -217,6 +221,24 @@ sprint report marked all 9 as added because Start-sprint changelog writes
 landed 1–19s after `startDate`. Engine now uses changelog + 2-minute start
 window; carryover only matches the board's previous closed sprint.
 Debug evidence panel removed in **2.8.0**.
+
+### 2026-08-29 — 2.8.0 was never in Git; first rollback predates process
+
+Accepted 2.8.0 was deployed from a dirty working tree and not committed.
+Later `origin/main` work could not restore it. The first rollback
+(`7743ec7` *Revert Delivery Intelligence to last known-good desktop
+build*) happened **before** the release/rollback structure
+(`3ade8fd`, `docs/RELEASE-PROCESS.md`). That revert was not a restore
+from a tagged 2.8.0 SHA — Git never had that SHA.
+
+Recovered exact tree onto `recovery/delivery-intelligence-2.8.0` at
+`4f44eb315d5cbd9320c42ce150a360bb522c0a44`. Verification: tests 20/20,
+`forge lint` clean, Forge development **2.13.0**. No merge to `main`.
+No new tag. Full handoff: `docs/RECOVERY-2.8.0.md`.
+
+**Formal process will be updated shortly.** Until then, do not treat
+`di-v0.1.0` / `origin/main` as known-good 2.8.0, and do not invent
+another rollback.
 
 ## Secrets for mobile and Cloud Agents
 

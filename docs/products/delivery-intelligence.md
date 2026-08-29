@@ -3,7 +3,11 @@
 Working product name: **Delivery Intelligence for Jira**  
 Version: **0.1.0** (read-only MVP)  
 Forge app location: `apps/delivery-intelligence/`  
-Status: **Registered and installed** on demo site (development **2.8.0**)
+Status: **Registered and installed** on demo site. Verified recovered
+source is `recovery/delivery-intelligence-2.8.0` @ `4f44eb3`
+(Forge development **2.13.0**, UI Build still `2.8.0`).
+`origin/main` rollback `7743ec7` is **not** this source — see
+`docs/RECOVERY-2.8.0.md`. Formal process will be updated shortly.
 
 Forge app ID:
 
@@ -319,6 +323,7 @@ root manifest still targets the legacy app only.
 
 ## Related docs
 
+- `docs/RECOVERY-2.8.0.md` — 2.8.0 recovery handoff (read before rollback)
 - `docs/PRODUCT-INDEX.md`
 - `docs/MULTI-APP-REPO-STRATEGY.md`
 - `docs/ROVO-DELIVERY-INTELLIGENCE-ARCHITECTURE.md`

@@ -7,6 +7,37 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-29 — [Delivery Intelligence] 2.8.0 recovered; first rollback predates process
+
+### Goal
+Preserve the accepted Forge 2.8.0 source and tell the other agent why the
+first `origin/main` rollback could not restore it.
+
+### What happened
+- Accepted PLAT 2.8.0 was deployed from a dirty working tree and never
+  committed. Git therefore had no SHA to roll back to.
+- The other agent’s first rollback (`7743ec7` *Revert Delivery
+  Intelligence to last known-good desktop build*) happened **before** the
+  release/rollback structure (`3ade8fd`, `docs/RELEASE-PROCESS.md`).
+  That revert is not the verified 2.8.0 source. `di-v0.1.0` on main is
+  not that source either.
+- This workspace was identified as the exact 2.8.0 tree and committed as
+  `4f44eb315d5cbd9320c42ce150a360bb522c0a44` on
+  `recovery/delivery-intelligence-2.8.0`.
+- Verification from that clean commit: 20/20 tests, `forge lint` clean,
+  Forge development **2.13.0**. UI Build still `2.8.0`. Not merged to
+  `main`. No tag yet.
+
+### For the other agent
+Read `docs/RECOVERY-2.8.0.md`. **Formal process will be updated shortly.**
+Do not invent another rollback or retag until that update.
+
+### Expected PLAT fingerprint (manual check on 2.13.0)
+8 original / 1 added (PLAT-33255) / 12.5% / 0 carryover / health 82 /
+On Track / no debug dump
+
+---
+
 ## 2026-08-27 — [Delivery Intelligence] PLAT live baseline accepted
 
 ### Goal

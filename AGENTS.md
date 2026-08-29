@@ -14,13 +14,27 @@ When you finish meaningful work, append a dated entry to both
 `.cursor/session-history.md` and the chat-history section of
 `docs/CHAT-CONTEXT.md`.
 
-## Status (2026-08-27)
+## Status (2026-08-29) — 2.8.0 recovery (read first)
+
+If you are the agent that hit “code went bad” and rolled Delivery
+Intelligence back on `origin/main`: **that first rollback happened before
+the release/rollback structure existed.** `7743ec7` is not the verified
+2.8.0 source. Forge 2.8.0 was packaged from an uncommitted working tree;
+Git never had it, so a Git revert could not restore it.
+
+**Formal process will be updated shortly.** Do not invent another rollback
+or retag until that update. Full story: `docs/RECOVERY-2.8.0.md`.
+
+Verified recovered source (do not merge to `main` yet):
+
+- Branch: `recovery/delivery-intelligence-2.8.0`
+- Commit: `4f44eb315d5cbd9320c42ce150a360bb522c0a44`
+- Verification deploy: Forge development **2.13.0** (UI Build still `2.8.0`)
 
 **Delivery Intelligence v0.1** is a **separate Forge app**
 (`apps/delivery-intelligence/`), registered as
 `ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026`.
-Latest local laptop deploy: development **2.8.0**, installed on
-`one-atlas-qzzp.atlassian.net`.
+Installed on `one-atlas-qzzp.atlassian.net`.
 
 **Legacy app:** Jira Admin Health v0.4 — development **4.8.0** on root manifest
 (`ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`). Do not
