@@ -59,7 +59,9 @@ fetch → branch from accepted main → commit → (optional: deploy development
 2. Create a branch from current accepted `main` (`feature/…`, `fix/…`, `chore/…`). Do not develop on `main`.
 3. Change **one product** when possible (see `docs/PRODUCT-INDEX.md`)
 4. Commit before any Forge deploy. Tree must be clean.
-5. Deploy to `development` from that exact SHA if the user wants a live test. Record the row.
+5. Deploy with `./scripts/forge-deploy.sh di development` (or `legacy`).
+   It refuses a dirty tree, prints the last recorded SHA, deploys, and
+   records the new row. Then commit the updated log files.
 6. Deploying is not known-good. Wait for user acceptance.
 7. After acceptance: merge to `main`. If the user names a milestone tag, create it and update `docs/RELEASES.md`.
 
@@ -147,8 +149,8 @@ When an agent finishes work:
 
 1. Fetch/inspect GitHub first. Do not rely on chat memory alone.
 2. Commit + push the **branch**. Never deploy dirty.
-3. Deploy to `development` only if asked to test live, from that exact SHA.
-4. Append `docs/DEPLOYMENT-HISTORY.md` and report product / branch / SHA / Forge version / env / test+lint / clean tree / build file changes.
+3. Deploy to `development` only if asked, using `./scripts/forge-deploy.sh`.
+4. Commit the generated log files. Report product / branch / SHA / Forge version / env / test+lint / clean tree / build file changes.
 5. **Do not create release tags** unless the user names the tag.
 6. If something breaks: restore the recorded SHA or tag. Do not reconstruct source.
 

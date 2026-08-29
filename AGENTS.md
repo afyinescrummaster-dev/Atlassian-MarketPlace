@@ -60,8 +60,9 @@ Never deploy a dirty working tree. Forge deployments must always map to
 an exact Git commit SHA.
 
 **3. Every test deployment is recoverable — even before `main`.**  
-For every Forge development deployment, record in
-`docs/DEPLOYMENT-HISTORY.md`:
+Use `./scripts/forge-deploy.sh <di|legacy> development` so the SHA is
+captured automatically. That writes `docs/deployments.jsonl` and
+refreshes `docs/DEPLOYMENT-HISTORY.md`. Record:
 
 - app/product
 - branch
@@ -122,7 +123,8 @@ deployed so we can restore it. Read `docs/DEPLOYMENT-HISTORY.md` first.
 - whether the working tree was clean
 - whether files changed during build
 
-Then append the same facts to `docs/DEPLOYMENT-HISTORY.md`.
+Then commit the updated `docs/deployments.jsonl` and
+`docs/DEPLOYMENT-HISTORY.md`.
 
 **13. Mobile and desktop chats must share the same source of truth.**  
 Neither chat should rely solely on conversation memory. Before making

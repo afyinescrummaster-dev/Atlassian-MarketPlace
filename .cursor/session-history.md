@@ -7,6 +7,19 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-29 — [Process] automate deployment history
+
+### Goal
+Make every Forge deploy map to a Git SHA automatically.
+
+### Done
+- `docs/deployments.jsonl` append-only machine log
+- `./scripts/forge-deploy.sh` refuses dirty trees, deploys, records version
+- `./scripts/record-deploy.sh` + renderer for `docs/DEPLOYMENT-HISTORY.md`
+- Branch: `feature/deployment-history-automation` (not merged yet)
+
+---
+
 ## 2026-08-29 — [Delivery Intelligence] tagged known-good `di-v0.1.1`
 
 ### Goal
