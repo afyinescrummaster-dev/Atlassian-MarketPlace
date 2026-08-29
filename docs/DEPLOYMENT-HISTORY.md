@@ -31,7 +31,7 @@ Do not guess a rollback into unrecorded 2.1.0–2.12.0 deploys.
 
 | App | Deployment revision | Git SHA | Forge env | Forge version | When (UTC) | Notes |
 |---|---|---|---|---|---|---|
-| Delivery Intelligence | `deploy/di/development/2.13.0` | `4f44eb3` | `development` | **2.13.0** | 2026-08-29T17:37:39Z | Tests 20/20, lint clean. PLAT accepted: 8 original / 1 added PLAT-33255 / 12.5% / 0 carryover / health 82. Contained in main via 8b570a9. Official known-good: di-v0.1.1. |
+| Delivery Intelligence | `deploy/di/development/2.14.0` | `f30e2e9c132d` | `development` | **2.14.0** | 2026-08-29T18:42:25Z | Deployed from clean f30e2e9c132d via scripts/forge-deploy.sh |
 | Legacy root app | `deploy/legacy/development/4.8.0` | `a0c7df4` | `development` | **4.8.0** | 2026-08-27T00:00:00Z | Admin Health v0.4 boxed Custom UI |
 
 Site: `https://one-atlas-qzzp.atlassian.net`
@@ -43,6 +43,7 @@ Code: `apps/delivery-intelligence/`
 
 | When (UTC) | Kind | Branch | Git SHA | Env | Forge version | Revision | Result |
 |---|---|---|---|---|---|---|---|
+| 2026-08-29T18:42:25Z | deploy | feature/deployment-history-automation | `f30e2e9c132d` | development | 2.14.0 | `deploy/di/development/2.14.0` | Deployed from clean f30e2e9c132d via scripts/forge-deploy.sh |
 | 2026-08-29T17:37:39Z | historical | recovery/delivery-intelligence-2.8.0 | `4f44eb3` | development | 2.13.0 | `deploy/di/development/2.13.0` | Tests 20/20, lint clean. PLAT accepted: 8 original / 1 added PLAT-33255 / 12.5% / 0 carryover / health 82. Contained in main via 8b570a9. Official known-good: di-v0.1.1. |
 | 2026-08-28T02:21:06Z | historical | dirty-working-tree | `uncommitted` | development | 2.8.0 | `` | Accepted PLAT from uncommitted tree. Recovered later as 4f44eb3. Do not repeat. |
 
