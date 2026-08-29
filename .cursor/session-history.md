@@ -7,6 +7,28 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-29 — [Delivery Intelligence] 2.8.0 recovered; first rollback predates process
+
+### Goal
+Tell the rollback/release-process agent that the first revert happened
+before the structure existed, and point at the recovered 2.8.0 source.
+
+### What happened
+- Accepted PLAT 2.8.0 was deployed from a dirty working tree and never
+  committed. Git had no SHA to roll back to.
+- First rollback (`7743ec7`) happened **before** `3ade8fd` added
+  `docs/RELEASE-PROCESS.md`. That revert is not verified 2.8.0.
+  `di-v0.1.0` is not that source either.
+- Recovered tree: `recovery/delivery-intelligence-2.8.0` @ `4f44eb3`.
+  Verification: 20/20 tests, lint clean, Forge development **2.13.0**.
+  Recovered source not merged to `main`. No new tag.
+
+### For this agent
+Read `docs/RECOVERY-2.8.0.md`. **Formal process will be updated shortly.**
+Do not invent another rollback or retag until that update.
+
+---
+
 ## 2026-08-27 — [Delivery Intelligence] v0.1 monorepo foundation
 
 ### Goal

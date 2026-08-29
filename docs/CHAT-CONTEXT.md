@@ -3,7 +3,7 @@
 This file is the handoff for Cursor mobile or a remote agent. Read it before
 changing the Forge app. Do not invent missing Jira fields or sample metrics.
 
-Last updated: 2026-08-27
+Last updated: 2026-08-29
 
 ## What this repo is
 
@@ -18,6 +18,7 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
+- Delivery Intelligence recovered 2.8.0 source: `recovery/delivery-intelligence-2.8.0` @ `4f44eb3` (Forge **2.13.0**). `7743ec7` / `di-v0.1.0` are not that source. See `docs/RECOVERY-2.8.0.md`. Formal process will be updated shortly.
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -199,6 +200,22 @@ Converted Admin Health to Custom UI (`static/admin-health/`) to match the
 mockup box layout: sidebar, equal summary cards, why-score chips,
 recommended review cards, boxed Project / Custom Field modules with tables.
 Branch `cursor/admin-health-box-ui-0bfb`.
+
+
+### 2026-08-29 — 2.8.0 was never in Git; first rollback predates process
+
+Accepted 2.8.0 was deployed from a dirty working tree and not committed.
+The first rollback (`7743ec7`) happened **before** the release/rollback
+structure (`3ade8fd`, `docs/RELEASE-PROCESS.md`). That revert is not a
+restore from a tagged 2.8.0 SHA — Git never had that SHA. `di-v0.1.0`
+is not that source.
+
+Recovered exact tree: `recovery/delivery-intelligence-2.8.0` @
+`4f44eb315d5cbd9320c42ce150a360bb522c0a44`. Verification deploy: Forge
+development **2.13.0**. Recovered source not merged to `main`.
+Full handoff: `docs/RECOVERY-2.8.0.md`.
+
+**Formal process will be updated shortly.** Do not invent another rollback.
 
 ## Secrets for mobile and Cloud Agents
 

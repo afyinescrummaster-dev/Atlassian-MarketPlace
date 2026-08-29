@@ -5,6 +5,8 @@ Agents and humans follow the same rules so we never “guess” which files to r
 
 Last updated: 2026-08-29
 
+> **Note:** The first DI rollback (`7743ec7`) happened **before this process existed**. `di-v0.1.0` is not verified 2.8.0. Read `docs/RECOVERY-2.8.0.md`. Formal process will be updated shortly.
+
 ---
 
 ## Principles

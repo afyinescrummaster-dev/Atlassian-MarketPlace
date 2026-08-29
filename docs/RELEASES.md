@@ -2,6 +2,8 @@
 
 Only **tagged** releases belong here. Update this file when you tag or roll back.
 
+> **2026-08-29:** `di-v0.1.0` was tagged after a manual revert that predates this registry. It is **not** the verified Forge 2.8.0 source. See `docs/RECOVERY-2.8.0.md`. Formal process will be updated shortly.
+
 See process: `docs/RELEASE-PROCESS.md`
 
 ---
