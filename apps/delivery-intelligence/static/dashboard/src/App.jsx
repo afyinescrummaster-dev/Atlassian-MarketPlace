@@ -14,7 +14,7 @@ import "./App.css";
 
 const AGENT_KEY = "delivery-intelligence-agent";
 const AGENT_NAME = "Delivery Intelligence";
-const UI_BUILD = "2.9.1";
+const UI_BUILD = "2.9.2";
 
 const formatMetric = (value, suffix = "") => {
   if (value == null || Number.isNaN(value)) {
@@ -123,7 +123,7 @@ const DrilldownPanel = ({ title, onClose, onOpenJira, canOpenJira, children }) =
       <div className="btn-row">
         {canOpenJira ? (
           <button className="btn primary" type="button" onClick={onOpenJira}>
-            Open in Jira
+            Show in Jira
           </button>
         ) : null}
         <button className="btn" type="button" onClick={onClose}>
@@ -321,10 +321,7 @@ export default function App() {
     };
   }, [snapshot]);
 
-  const pathForDrilldown = (id, issueKey = null) => {
-    if (issueKey) {
-      return `/browse/${issueKey}`;
-    }
+  const pathForDrilldown = (id) => {
     if (id === "completion") {
       return (
         jiraPathForJql(
@@ -336,17 +333,22 @@ export default function App() {
     return jiraPathForKeys(issues.map((row) => row.key));
   };
 
-  const openMetric = async (id, issueKey = null) => {
-    setDrilldown(id);
-    const path = pathForDrilldown(id, issueKey);
+  const showDrilldown = (id) => {
+    setNavMessage(null);
+    setDrilldown((current) => (current === id ? null : id));
+  };
+
+  const openInJira = async (id) => {
+    const path = pathForDrilldown(id);
     if (!path) {
+      setNavMessage("There are no issues to show in Jira for this list.");
       return;
     }
     setNavMessage(null);
     try {
       await openJiraPath(path);
     } catch {
-      setNavMessage("Could not open Jira. Use the issue links below.");
+      setNavMessage("Could not open Jira. Click an issue key below instead.");
     }
   };
 
@@ -398,7 +400,7 @@ export default function App() {
           title="Sprint issues"
           onClose={() => setDrilldown(null)}
           canOpenJira={Boolean(pathForDrilldown("completion"))}
-          onOpenJira={() => openMetric("completion")}
+          onOpenJira={() => openInJira("completion")}
         >
           <div className="split-lists">
             <div>
@@ -459,7 +461,7 @@ export default function App() {
         title={config.title}
         onClose={() => setDrilldown(null)}
         canOpenJira={Boolean(pathForDrilldown(id))}
-        onOpenJira={() => openMetric(id)}
+        onOpenJira={() => openInJira(id)}
       >
         <IssueList issues={config.issues} empty={config.empty} onOpen={openIssue} />
       </DrilldownPanel>
@@ -544,7 +546,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "completion" ? "active" : ""}`}
                 type="button"
-                onClick={() => openMetric("completion")}
+                onClick={() => showDrilldown("completion")}
               >
                 <div className="n">{formatMetric(snapshot.completionPercent, "%")}</div>
                 <div className="l">Completion</div>
@@ -552,7 +554,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "added" ? "active" : ""}`}
                 type="button"
-                onClick={() => openMetric("added")}
+                onClick={() => showDrilldown("added")}
               >
                 <div className="n">{formatMetric(snapshot.scopeChangePercent, "%")}</div>
                 <div className="l">Scope change</div>
@@ -560,7 +562,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "carryover" ? "active" : ""}`}
                 type="button"
-                onClick={() => openMetric("carryover")}
+                onClick={() => showDrilldown("carryover")}
               >
                 <div className="n">{formatMetric(snapshot.carryoverCount)}</div>
                 <div className="l">Carryover</div>
@@ -568,7 +570,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "blocked" ? "active" : ""}`}
                 type="button"
-                onClick={() => openMetric("blocked")}
+                onClick={() => showDrilldown("blocked")}
               >
                 <div className="n">{formatMetric(snapshot.blockedCount)}</div>
                 <div className="l">Blocked</div>
@@ -576,7 +578,7 @@ export default function App() {
               <button
                 className={`kpi ${drilldown === "stale" ? "active" : ""}`}
                 type="button"
-                onClick={() => openMetric("stale")}
+                onClick={() => showDrilldown("stale")}
               >
                 <div className="n">{formatMetric(snapshot.staleCount)}</div>
                 <div className="l">Stale</div>
@@ -596,7 +598,7 @@ export default function App() {
                 <button
                   className={`scope-stat ${drilldown === "original" ? "active" : ""}`}
                   type="button"
-                  onClick={() => openMetric("original")}
+                  onClick={() => showDrilldown("original")}
                 >
                   <div className="n">{formatMetric(snapshot.originalCommittedCount)}</div>
                   <div className="l">Original commitment</div>
@@ -604,7 +606,7 @@ export default function App() {
                 <button
                   className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
                   type="button"
-                  onClick={() => openMetric("added")}
+                  onClick={() => showDrilldown("added")}
                 >
                   <div className="n">{formatMetric(snapshot.addedIssueCount)}</div>
                   <div className="l">Added after start</div>
@@ -612,7 +614,7 @@ export default function App() {
                 <button
                   className={`scope-stat ${drilldown === "completion" ? "active" : ""}`}
                   type="button"
-                  onClick={() => openMetric("completion")}
+                  onClick={() => showDrilldown("completion")}
                 >
                   <div className="n">{formatMetric(snapshot.currentIssueCount)}</div>
                   <div className="l">Current scope</div>
@@ -620,7 +622,7 @@ export default function App() {
                 <button
                   className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
                   type="button"
-                  onClick={() => openMetric("added")}
+                  onClick={() => showDrilldown("added")}
                 >
                   <div className="n">{formatSigned(snapshot.scopeChangePercent, "%")}</div>
                   <div className="l">Scope growth</div>
@@ -634,14 +636,14 @@ export default function App() {
                 <button
                   className="btn"
                   type="button"
-                  onClick={() => openMetric("original")}
+                  onClick={() => showDrilldown("original")}
                 >
                   View original commitment
                 </button>
                 <button
                   className="btn primary"
                   type="button"
-                  onClick={() => openMetric("added")}
+                  onClick={() => showDrilldown("added")}
                 >
                   View added issues
                 </button>
@@ -680,7 +682,7 @@ export default function App() {
                     <button
                       className="btn"
                       type="button"
-                      onClick={() => openMetric(item.drillDown, item.issueKey)}
+                      onClick={() => showDrilldown(item.drillDown)}
                     >
                       {item.suggestedAction}
                     </button>
