@@ -9,8 +9,8 @@ Working rules (required): **`AGENTS.md`**.
 Every deploy: **`docs/DEPLOYMENT-HISTORY.md`**.  
 Official tags only: **`docs/RELEASES.md`**.
 
-> `di-v0.1.0` is **not** the verified 2.8.0 source. Recovered 2.8.0 is on
-> `main` from `4f44eb3`. See `docs/RECOVERY-2.8.0.md`.
+> Known-good DI is `di-v0.1.1` @ `4f44eb3`. `di-v0.1.0` is historical only.
+> See `docs/RECOVERY-2.8.0.md`.
 
 ---
 
@@ -70,18 +70,20 @@ fetch → branch from accepted main → commit → (optional: deploy development
 From a clean `main` (or the exact commit you verified):
 
 ```bash
-# Delivery Intelligence
-./scripts/release-tag.sh di 0.1.0 "Desktop known-good sprint dashboard"
+# Tag current HEAD
+./scripts/release-tag.sh di 0.1.1 "Known-good recovered 2.8.0"
 
-# Legacy root app
+# Tag the exact accepted SHA (required when HEAD is a later merge)
+./scripts/release-tag.sh di 0.1.1 "Known-good recovered 2.8.0" 4f44eb3
+
 ./scripts/release-tag.sh legacy 0.4.0 "Admin Health boxed UI + existing modules"
 ```
 
 This:
 
-- Creates annotated tag `di-v0.1.0` or `legacy-v0.4.0`
+- Creates an annotated tag at HEAD, or at the optional SHA
 - Pushes the tag to `origin`
-- Reminds you to append a row in `docs/RELEASES.md`
+- Reminds you to update `docs/RELEASES.md` and `docs/DEPLOYMENT-HISTORY.md`
 
 ---
 

@@ -22,14 +22,14 @@ GitHub plus these files are the durable memory. Fetch and inspect remote
 state before changing or deploying. Do not invent release tags; the user
 names them.
 
-## Status (2026-08-29) — recovered 2.8.0 is on `main`
+## Status (2026-08-29) — recovery closed; `di-v0.1.1` is known-good
 
-Accepted Delivery Intelligence source from
-`recovery/delivery-intelligence-2.8.0` (`4f44eb3`) is merged to `main`.
-Verification deploy: Forge development **2.13.0** (UI Build still `2.8.0`).
+**Known-good Delivery Intelligence:** tag `di-v0.1.1` → Git `4f44eb3` →
+contained in `main` via `8b570a9` → Forge development **2.13.0** →
+PLAT accepted.
 
-`7743ec7` and tag `di-v0.1.0` are **not** that source. Story:
-`docs/RECOVERY-2.8.0.md`. Official tag waits for the user.
+`di-v0.1.0` and `7743ec7` are **not** that source. Story:
+`docs/RECOVERY-2.8.0.md`.
 
 **Delivery Intelligence v0.1** is a **separate Forge app**
 (`apps/delivery-intelligence/`), registered as

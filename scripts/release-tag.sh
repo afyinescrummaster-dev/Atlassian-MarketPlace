@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Create an official annotated release tag and push it.
-# Usage: ./scripts/release-tag.sh <di|legacy> <semver> ["message"]
+# Usage: ./scripts/release-tag.sh <di|legacy> <semver> ["message"] [sha]
+# Tag a specific SHA when the accepted deploy is not current HEAD
+# (example: di-v0.1.1 points at 4f44eb3, not the later merge).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -9,10 +11,11 @@ cd "$ROOT"
 APP="${1:-}"
 VERSION="${2:-}"
 MESSAGE="${3:-}"
+TARGET="${4:-HEAD}"
 
 if [[ -z "$APP" || -z "$VERSION" ]]; then
-  echo "Usage: $0 <di|legacy> <semver> [\"message\"]"
-  echo "Example: $0 di 0.1.0 \"Desktop known-good\""
+  echo "Usage: $0 <di|legacy> <semver> [\"message\"] [sha]"
+  echo "Example: $0 di 0.1.1 \"Known-good recovered 2.8.0\" 4f44eb3"
   exit 1
 fi
 
@@ -39,13 +42,15 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
   exit 1
 fi
 
-SHA="$(git rev-parse --short HEAD)"
-echo "==> Tagging $TAG at $SHA"
-git tag -a "$TAG" -m "$MESSAGE"
+SHA="$(git rev-parse --verify "$TARGET")"
+SHORT="$(git rev-parse --short "$SHA")"
+echo "==> Tagging $TAG at $SHORT ($SHA)"
+git tag -a "$TAG" "$SHA" -m "$MESSAGE"
 git push origin "$TAG"
 
 echo ""
-echo "Tagged and pushed: $TAG ($SHA)"
+echo "Tagged and pushed: $TAG ($SHORT)"
 echo "Next:"
 echo "  1. Append/update docs/RELEASES.md"
-echo "  2. Deploy: ./scripts/release-deploy.sh $APP $VERSION development"
+echo "  2. Record docs/DEPLOYMENT-HISTORY.md if this SHA is already deployed"
+echo "  3. Deploy only if needed: ./scripts/release-deploy.sh $APP $VERSION development"

@@ -7,6 +7,20 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-29 — [Delivery Intelligence] tagged known-good `di-v0.1.1`
+
+### Goal
+Close recovery with an immutable tag on the exact accepted, deployed SHA.
+
+### Done
+- Annotated tag `di-v0.1.1` → `4f44eb315d5cbd9320c42ce150a360bb522c0a44`
+- Not the merge commit `8b570a9` (that only brought the source onto `main`)
+- Forge development **2.13.0**, PLAT accepted
+- Updated `docs/RELEASES.md` and `docs/DEPLOYMENT-HISTORY.md`
+- Recovery officially closed
+
+---
+
 ## 2026-08-29 — [Delivery Intelligence] recovered 2.8.0 merged to main
 
 ### Goal

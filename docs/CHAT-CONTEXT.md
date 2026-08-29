@@ -18,12 +18,10 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
-- Delivery Intelligence: accepted 2.8.0 source is now on `main` (from
-  `4f44eb3`). Verification deploy is development **2.13.0**.
-  `7743ec7` / `di-v0.1.0` are **not** that source. See
-  `docs/RECOVERY-2.8.0.md`. Official tag waits for the user.
-  Git + Forge working rules are in `AGENTS.md`. Deployment log:
-  `docs/DEPLOYMENT-HISTORY.md`.
+- Delivery Intelligence known-good: `di-v0.1.1` → `4f44eb3` → `main`
+  via `8b570a9` → Forge development **2.13.0**. `di-v0.1.0` is not
+  that source. See `docs/RECOVERY-2.8.0.md`. Rules: `AGENTS.md`.
+  Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -233,8 +231,8 @@ that revert could not restore it. `di-v0.1.0` is not that source.
 Recovered onto `recovery/delivery-intelligence-2.8.0` at
 `4f44eb315d5cbd9320c42ce150a360bb522c0a44`. Verification: tests 20/20,
 `forge lint` clean, Forge development **2.13.0**. That source is now
-merged to `main`. Git + Forge working rules are locked in `AGENTS.md`.
-Official tag waits for the user. Full handoff: `docs/RECOVERY-2.8.0.md`.
+merged to `main`. Tagged known-good `di-v0.1.1` at `4f44eb3` (not the
+merge). Working rules: `AGENTS.md`. Full handoff: `docs/RECOVERY-2.8.0.md`.
 
 ## Secrets for mobile and Cloud Agents
 

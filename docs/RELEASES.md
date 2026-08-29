@@ -2,10 +2,7 @@
 
 Only **tagged** releases belong here. Update this file when you tag or roll back.
 
-> **2026-08-29:** `di-v0.1.0` is **not** the verified Forge 2.8.0 source.
-> Accepted 2.8.0 is on `main` from `4f44eb3` (live Forge **2.13.0**).
-> Official replacement tag waits for the user. See `docs/RECOVERY-2.8.0.md`
-> and `docs/DEPLOYMENT-HISTORY.md`.
+Every Forge deploy (including untagged branch tests): **`docs/DEPLOYMENT-HISTORY.md`**.
 
 See process: `docs/RELEASE-PROCESS.md`
 
@@ -15,8 +12,8 @@ See process: `docs/RELEASE-PROCESS.md`
 
 | App | Tag | Commit | Forge env | Forge version | Notes |
 |---|---|---|---|---|---|
-| Delivery Intelligence | `di-v0.1.0` | `a29a5aa` | development | 2.12.0 | Desktop known-good; rolled back from mobile experiments |
-| Legacy root app | `legacy-v0.4.0` | `a0c7df4` | development | 4.8.0 | Admin Health v0.4 + existing modules |
+| Delivery Intelligence | `di-v0.1.1` | `4f44eb3` | development | **2.13.0** | Known-good recovered 2.8.0 source; contained in `main` via `8b570a9`; PLAT accepted |
+| Legacy root app | `legacy-v0.4.0` | `a0c7df4` | development | **4.8.0** | Admin Health v0.4 + existing modules |
 
 Site: `https://one-atlas-qzzp.atlassian.net`
 
@@ -26,7 +23,8 @@ Site: `https://one-atlas-qzzp.atlassian.net`
 
 | Tag | Date | Commit | What it is |
 |---|---|---|---|
-| `di-v0.1.0` | 2026-08-29 | `a29a5aa` | Read-only sprint dashboard + Rovo agent; last known-good desktop build |
+| `di-v0.1.1` | 2026-08-29 | `4f44eb315d5cbd9320c42ce150a360bb522c0a44` | Known-good recovered 2.8.0 source. Tests 20/20, lint clean, Forge development 2.13.0, PLAT accepted (8 original / 1 added PLAT-33255 / 12.5% / 0 carryover / health 82). Contained in `main` via `8b570a9`. |
+| `di-v0.1.0` | 2026-08-29 | `a29a5aa` | Historical only. Tagged after a manual revert that predates recovery. **Not** the verified 2.8.0 source. Do not roll back here expecting accepted PLAT. |
 
 App ID: `ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026`  
 Code: `apps/delivery-intelligence/`
@@ -47,9 +45,10 @@ Code: repo root (`manifest.yml`, `src/`, `static/`)
 ## How to roll back
 
 ```bash
-./scripts/release-rollback.sh di 0.1.0 development
+./scripts/release-rollback.sh di 0.1.1 development
 # or
 ./scripts/release-rollback.sh legacy 0.4.0 development
 ```
 
-Then update the “Currently deployed” table above.
+Then update the “Currently deployed” table above and append
+`docs/DEPLOYMENT-HISTORY.md`.

@@ -3,10 +3,9 @@
 Working product name: **Delivery Intelligence for Jira**  
 Version: **0.1.0** (read-only MVP)  
 Forge app location: `apps/delivery-intelligence/`  
-Status: **Accepted on `main`.** Recovered 2.8.0 source (`4f44eb3`) is
-merged. Live verification deploy is Forge development **2.13.0**
-(UI Build still `2.8.0`). Tag `di-v0.1.0` is **not** this source.
-See `docs/RECOVERY-2.8.0.md`. Official tag waits for the user.
+Status: **Known-good `di-v0.1.1`.** Git `4f44eb3`, on `main` via
+`8b570a9`, Forge development **2.13.0** (UI Build `2.8.0`).
+`di-v0.1.0` is not this source. See `docs/RECOVERY-2.8.0.md`.
 Working rules: `AGENTS.md`. Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
 
 Forge app ID:

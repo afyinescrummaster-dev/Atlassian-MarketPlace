@@ -3,9 +3,9 @@
 Handoff for any agent that worked the “code went bad” / first rollback /
 release-process chat, or that is about to roll back Delivery Intelligence.
 
-Recovered 2.8.0 source is now on `main`. Working rules are in
-`AGENTS.md`. Official replacement tag waits for the user. Do not invent
-a tag. Do not treat `di-v0.1.0` as this source.
+Recovery is closed. Known-good tag is `di-v0.1.1` → `4f44eb3`,
+contained in `main` via `8b570a9`, Forge development **2.13.0**.
+Working rules are in `AGENTS.md`. Do not treat `di-v0.1.0` as this source.
 
 ---
 
@@ -90,6 +90,5 @@ metrics (it marked all 9 PLAT issues as added).
 - Do not treat `7743ec7` or `di-v0.1.0` as known-good 2.8.0
 - Do not reconstruct `membership.js` or baseline logic from memory
 - Do not deploy from a dirty working tree
-- Do not invent a replacement tag; wait for the user
 - Follow `AGENTS.md` for all new work. Record deploys in
-  `docs/DEPLOYMENT-HISTORY.md`.
+  `docs/DEPLOYMENT-HISTORY.md`. Roll back with `di-v0.1.1`, not `di-v0.1.0`.

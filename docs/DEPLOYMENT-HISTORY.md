@@ -15,7 +15,7 @@ Last updated: 2026-08-29
 
 | App | Branch | Git SHA | Forge env | Forge version | When (UTC) | Notes |
 |---|---|---|---|---|---|---|
-| Delivery Intelligence | recovered `4f44eb3` (now on `main`) | `4f44eb315d5cbd9320c42ce150a360bb522c0a44` | `development` | **2.13.0** | 2026-08-29 17:37 | UI Build `2.8.0`; PLAT accepted. Live SHA is the recovery commit, not a later docs merge. |
+| Delivery Intelligence | `di-v0.1.1` @ `4f44eb3` (on `main` via `8b570a9`) | `4f44eb315d5cbd9320c42ce150a360bb522c0a44` | `development` | **2.13.0** | 2026-08-29 17:37 | Known-good. UI Build `2.8.0`. PLAT accepted. |
 | Legacy root app | `main` | `a0c7df4` | `development` | **4.8.0** | 2026-08-27 | Admin Health v0.4 boxed UI |
 
 Site: `https://one-atlas-qzzp.atlassian.net`
@@ -29,7 +29,7 @@ Code: `apps/delivery-intelligence/`
 
 | When (UTC) | Branch | Git SHA | Env | Forge version | Tree | Result |
 |---|---|---|---|---|---|---|
-| 2026-08-29 17:37 | `recovery/delivery-intelligence-2.8.0` | `4f44eb315d5cbd9320c42ce150a360bb522c0a44` | development | 2.13.0 | clean | Tests 20/20, lint clean. Same source now on `main`. PLAT fingerprint accepted: 8 original / 1 added PLAT-33255 / 12.5% / 0 carryover / health 82. |
+| 2026-08-29 17:37 | `recovery/delivery-intelligence-2.8.0` | `4f44eb315d5cbd9320c42ce150a360bb522c0a44` | development | 2.13.0 | clean | Tests 20/20, lint clean. Tagged `di-v0.1.1`. On `main` via `8b570a9`. PLAT: 8 original / 1 added PLAT-33255 / 12.5% / 0 carryover / health 82. |
 | 2026-08-28 02:21 | dirty working tree (ancestor `57c833c`) | **not in Git at deploy time** | development | 2.8.0 | dirty | Accepted PLAT. Later recovered as `4f44eb3`. Lesson: never deploy dirty. |
 | (earlier) | various | unrecorded | development | 2.1.0–2.12.0 | mixed | Incomplete. Do not guess a rollback into this range. |
 
