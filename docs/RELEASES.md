@@ -10,8 +10,8 @@ See process: `docs/RELEASE-PROCESS.md`
 
 | App | Tag | Commit | Forge env | Forge version | Notes |
 |---|---|---|---|---|---|
-| Delivery Intelligence | `di-v0.1.0` | `7743ec7` | development | 2.12.0 | Desktop known-good; rolled back from mobile experiments |
-| Legacy root app | `legacy-v0.4.0` | *(tag at Admin Health boxed UI line)* | development | 4.8.0 | Admin Health v0.4 + existing modules |
+| Delivery Intelligence | `di-v0.1.0` | `a29a5aa` | development | 2.12.0 | Desktop known-good; rolled back from mobile experiments |
+| Legacy root app | `legacy-v0.4.0` | `a0c7df4` | development | 4.8.0 | Admin Health v0.4 + existing modules |
 
 Site: `https://one-atlas-qzzp.atlassian.net`
 
