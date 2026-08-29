@@ -1,22 +1,9 @@
 import { buildHealthSnapshot } from "../delivery-intelligence/analyze.js";
+import { failure, logDiag, STAGES } from "../delivery-intelligence/diagnostics.js";
+import { resolveProjectKey } from "../delivery-intelligence/project-context.js";
 import { loadDeliveryContext } from "../jira/agile-client.js";
 
-const resolveProjectKey = (payload, context) => {
-  const fromPayload =
-    typeof payload?.projectKey === "string" ? payload.projectKey.trim() : "";
-  if (fromPayload) {
-    return fromPayload.toUpperCase();
-  }
-
-  const extension = context?.extension || {};
-  const fromContext =
-    extension.project?.key ||
-    extension.projectKey ||
-    context?.project?.key ||
-    null;
-
-  return typeof fromContext === "string" ? fromContext.toUpperCase() : null;
-};
+export { resolveProjectKey };
 
 export const buildSnapshotForProject = async ({
   projectKey,
@@ -25,7 +12,7 @@ export const buildSnapshotForProject = async ({
 }) => {
   const loaded = await loadDeliveryContext({ projectKey, boardId });
   if (!loaded.ok) {
-    return { ok: false, error: loaded.error };
+    return loaded;
   }
 
   if (!loaded.sprint) {
@@ -51,38 +38,79 @@ export const buildSnapshotForProject = async ({
     };
   }
 
-  const snapshot = buildHealthSnapshot({
-    context: loaded.context,
-    sprint: loaded.sprint,
-    issues: loaded.issues,
-    changelogsByKey: loaded.changelogsByKey,
-    now,
-  });
+  try {
+    const snapshot = buildHealthSnapshot({
+      context: loaded.context,
+      sprint: loaded.sprint,
+      issues: loaded.issues,
+      changelogsByKey: loaded.changelogsByKey,
+      previousSprint: loaded.previousSprint,
+      now,
+    });
 
-  return {
-    ok: true,
-    snapshot: {
-      ...snapshot,
-      limitations: [...(snapshot.limitations || []), ...(loaded.limitations || [])],
-    },
-  };
+    logDiag("scope-classified", {
+      stage: STAGES.BUILD_SNAPSHOT,
+      projectKey,
+      boardId: loaded.context?.boardId ?? boardId,
+      sprintId: loaded.sprint?.id,
+      issueCount: snapshot.currentIssueCount,
+      startDate: loaded.sprint?.startDate,
+      activatedDate: loaded.sprint?.activatedDate,
+      commitmentAt: loaded.sprint?.activatedDate || loaded.sprint?.startDate,
+      originalCommittedCount: snapshot.originalCommittedCount,
+      addedIssueCount: snapshot.addedIssueCount,
+      carryoverCount: snapshot.carryoverCount,
+      source: snapshot.capabilities?.scopeChange?.source || null,
+    });
+
+    return {
+      ok: true,
+      snapshot: {
+        ...snapshot,
+        limitations: [...(snapshot.limitations || []), ...(loaded.limitations || [])],
+      },
+    };
+  } catch {
+    return failure({
+      error: "unavailable",
+      stage: STAGES.BUILD_SNAPSHOT,
+      projectKey,
+      boardId: loaded.context?.boardId ?? boardId,
+      message: `Could not build the sprint health snapshot for project ${projectKey}.`,
+    });
+  }
 };
 
 export const registerDeliveryResolvers = (resolver) => {
   resolver.define("getDeliveryHealth", async ({ payload, context }) => {
-    const projectKey = resolveProjectKey(payload, context);
-    if (!projectKey) {
-      return { ok: false, error: "missing-project" };
+    const resolved = resolveProjectKey(payload, context);
+    if (!resolved.projectKey) {
+      return failure({
+        error: "missing-project",
+        stage: STAGES.RESOLVE_PROJECT,
+        message:
+          "Open Delivery Intelligence from a Jira Software project to load sprint context.",
+      });
     }
 
+    logDiag("resolved-project", {
+      stage: STAGES.RESOLVE_PROJECT,
+      projectKey: resolved.projectKey,
+      source: resolved.source,
+    });
+
     try {
-      const result = await buildSnapshotForProject({
-        projectKey,
+      return await buildSnapshotForProject({
+        projectKey: resolved.projectKey,
         boardId: payload?.boardId || null,
       });
-      return result;
     } catch {
-      return { ok: false, error: "unavailable" };
+      return failure({
+        error: "unavailable",
+        stage: STAGES.BUILD_SNAPSHOT,
+        projectKey: resolved.projectKey,
+        message: `Could not analyze the sprint for project ${resolved.projectKey}.`,
+      });
     }
   });
 };

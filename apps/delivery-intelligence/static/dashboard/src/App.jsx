@@ -4,6 +4,7 @@ import "./App.css";
 
 const AGENT_KEY = "delivery-intelligence-agent";
 const AGENT_NAME = "Delivery Intelligence";
+const UI_BUILD = "2.8.0";
 
 const formatMetric = (value, suffix = "") => {
   if (value == null || Number.isNaN(value)) {
@@ -22,30 +23,13 @@ const statusClass = (status) => {
   return "";
 };
 
-const buildFactsPrompt = (snapshot, intent) => {
-  const facts = {
-    projectKey: snapshot?.context?.projectKey,
-    boardName: snapshot?.context?.boardName,
-    sprint: snapshot?.sprint,
-    healthScore: snapshot?.healthScore,
-    healthStatus: snapshot?.healthStatus,
-    completionPercent: snapshot?.completionPercent,
-    scopeChangePercent: snapshot?.scopeChangePercent,
-    addedIssueCount: snapshot?.addedIssueCount,
-    carryoverCount: snapshot?.carryoverCount,
-    blockedCount: snapshot?.blockedCount,
-    staleCount: snapshot?.staleCount,
-    topAnomalies: (snapshot?.topAnomalies || []).slice(0, 5),
-    capabilities: snapshot?.capabilities,
-    limitations: snapshot?.limitations,
-  };
+const buildUserPrompt = (snapshot, intent) => {
+  const projectKey = snapshot?.context?.projectKey;
+  if (!projectKey) {
+    return intent;
+  }
 
-  return `${intent}
-
-Use these deterministic FACTS as the source of quantitative truth. Do not invent metrics.
-
-FACTS:
-${JSON.stringify(facts, null, 2)}`;
+  return `${intent} Focus on the current sprint in project ${projectKey}.`;
 };
 
 export default function App() {
@@ -147,11 +131,23 @@ export default function App() {
     }
 
     try {
+      if (typeof globalThis.console?.debug === "function") {
+        globalThis.console.debug("[delivery-intelligence] rovo-handoff", {
+          projectKey: snapshot?.context?.projectKey,
+          boardId: snapshot?.context?.boardId,
+          sprintId: snapshot?.sprint?.id,
+          originalCommittedCount: snapshot?.originalCommittedCount,
+          addedIssueCount: snapshot?.addedIssueCount,
+          scopeChangePercent: snapshot?.scopeChangePercent,
+          carryoverCount: snapshot?.carryoverCount,
+        });
+      }
+
       await rovo.open({
         type: "forge",
         agentKey: AGENT_KEY,
         agentName: AGENT_NAME,
-        prompt: buildFactsPrompt(snapshot, intent),
+        prompt: buildUserPrompt(snapshot, intent),
       });
     } catch {
       setAiMessage(
@@ -177,9 +173,12 @@ export default function App() {
           {error === "permission"
             ? "This app could not read sprint data with the current permissions."
             : error === "missing-project"
-              ? "Open Delivery Intelligence from a Jira project to load sprint context."
-              : "We couldn’t analyze this sprint right now."}
+              ? "Open Delivery Intelligence from a Jira Software project with an active sprint."
+              : "We couldn’t analyze this sprint right now. Open a Jira Software project that has a board and an active sprint, then retry."}
         </p>
+        {error && error !== "permission" && error !== "missing-project" ? (
+          <p className="sub">Error code: {error}</p>
+        ) : null}
         <button className="btn primary" type="button" onClick={refresh}>
           Retry
         </button>
@@ -200,7 +199,11 @@ export default function App() {
       <header className="header">
         <div>
           <h1>Delivery Intelligence</h1>
-          <div className="meta">{contextLine}</div>
+          <div className="meta">
+            {contextLine}
+            {contextLine ? " · " : ""}
+            Build {UI_BUILD}
+          </div>
         </div>
         <div className="btn-row">
           <button
@@ -247,7 +250,13 @@ export default function App() {
                 Generated {new Date(snapshot.generatedAt).toLocaleString()}
               </p>
               <p className="sub">
-                {snapshot.totalIssueCount ?? 0} sprint issues analyzed
+                {snapshot.currentIssueCount ?? snapshot.totalIssueCount ?? 0} current
+                {snapshot.originalCommittedCount != null
+                  ? ` · ${snapshot.originalCommittedCount} original commitment`
+                  : ""}
+                {snapshot.addedIssueCount != null
+                  ? ` · ${snapshot.addedIssueCount} added after start`
+                  : ""}
               </p>
               {(snapshot.limitations || []).slice(0, 2).map((item) => (
                 <p className="sub" key={item}>
@@ -311,9 +320,7 @@ export default function App() {
             type="button"
             disabled={!snapshot?.sprint}
             onClick={() =>
-              openRovo(
-                "Explain this sprint's top risks in plain language for the delivery team.",
-              )
+              openRovo("Explain this sprint's top risks in plain language.")
             }
           >
             Explain sprint
@@ -323,9 +330,7 @@ export default function App() {
             type="button"
             disabled={!snapshot?.sprint}
             onClick={() =>
-              openRovo(
-                "Recommend the top actions the team should address first. Stay read-only.",
-              )
+              openRovo("Recommend the actions this team should address first.")
             }
           >
             Recommend actions
@@ -335,9 +340,7 @@ export default function App() {
             type="button"
             disabled={!snapshot?.sprint}
             onClick={() =>
-              openRovo(
-                "Draft a concise leadership brief using only the supplied FACTS.",
-              )
+              openRovo("Draft a concise leadership brief for this sprint.")
             }
           >
             Generate leadership brief

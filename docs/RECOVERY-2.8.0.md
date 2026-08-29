@@ -3,9 +3,9 @@
 Handoff for any agent that worked the “code went bad” / first rollback /
 release-process chat, or that is about to roll back Delivery Intelligence.
 
-**Formal process will be updated shortly.** Until that update lands, do not
-invent another rollback, retag `di-v0.1.0`, or treat `origin/main` as the
-verified 2.8.0 source.
+Recovered 2.8.0 source is now on `main`. Working rules are in
+`AGENTS.md`. Official replacement tag waits for the user. Do not invent
+a tag. Do not treat `di-v0.1.0` as this source.
 
 ---
 
@@ -48,14 +48,15 @@ PLAT fingerprint.
 5. That dirty tree was preserved onto
    `recovery/delivery-intelligence-2.8.0` at
    `4f44eb315d5cbd9320c42ce150a360bb522c0a44` and pushed to origin.
-   No source reconstruction. No merge to `main`.
+   No source reconstruction.
 6. Verification from that exact clean commit: tests 20/20, `forge lint`
    clean, deployed Forge development **2.13.0**. UI Build string is still
-   `2.8.0`. Manual PLAT acceptance is the next gate.
+   `2.8.0`. That source is now merged to `main`. Official tag waits for
+   the user.
 
 ---
 
-## Recovered source (use this, not main)
+## Recovered source (now on `main`)
 
 | Item | Value |
 |---|---|
@@ -84,15 +85,11 @@ metrics (it marked all 9 PLAT issues as added).
 
 ---
 
-## What not to do until the formal process update
+## What not to do
 
-- Do not merge `recovery/delivery-intelligence-2.8.0` into `main` yet
-- Do not treat `7743ec7`, `di-v0.1.0`, or `origin/main` DI as known-good 2.8.0
+- Do not treat `7743ec7` or `di-v0.1.0` as known-good 2.8.0
 - Do not reconstruct `membership.js` or baseline logic from memory
 - Do not deploy from a dirty working tree
-- Do not create a new “known-good” tag until PLAT is re-accepted on **2.13.0**
-  and the user asks to tag
-- Formal process will be updated shortly with a stronger rule:
-
-  **Any successful acceptance-tested Forge deployment must be tied to a Git
-  SHA before the work session is considered complete.**
+- Do not invent a replacement tag; wait for the user
+- Follow `AGENTS.md` for all new work. Record deploys in
+  `docs/DEPLOYMENT-HISTORY.md`.

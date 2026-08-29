@@ -4,7 +4,6 @@
   "private": true,
   "description": "Delivery Intelligence for Jira — sprint health dashboard and Rovo agent (read-only MVP).",
   "main": "src/index.js",
-  "type": "module",
   "scripts": {
     "lint:code": "eslint src test static/dashboard/src",
     "test": "node --test test/*.test.js",

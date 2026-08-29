@@ -5,17 +5,24 @@ Agents and humans follow the same rules so we never “guess” which files to r
 
 Last updated: 2026-08-29
 
-> **Note:** The first DI rollback (`7743ec7`) happened **before this process existed**. `di-v0.1.0` is not verified 2.8.0. Read `docs/RECOVERY-2.8.0.md`. Formal process will be updated shortly.
+Working rules (required): **`AGENTS.md`**.  
+Every deploy: **`docs/DEPLOYMENT-HISTORY.md`**.  
+Official tags only: **`docs/RELEASES.md`**.
+
+> `di-v0.1.0` is **not** the verified 2.8.0 source. Recovered 2.8.0 is on
+> `main` from `4f44eb3`. See `docs/RECOVERY-2.8.0.md`.
 
 ---
 
 ## Principles
 
-1. **Git is the source of truth** for code. Forge only hosts what we deploy from Git.
-2. **An official release = annotated Git tag** pointing at a known-good commit.
-3. **Rollback = check out that tag → rebuild → redeploy.** Not manual file surgery.
-4. **Experiments stay on branches / development env.** Official demos use tagged releases.
-5. **Each Forge app has its own tags** (`di-*` vs `legacy-*`). Never mix apps in one tag name.
+1. **Git is the source of truth** for code. Forge only hosts what we deploy from a recorded Git SHA.
+2. **Never deploy a dirty working tree.** Every visible Forge version must map to an exact commit.
+3. **Development history ≠ release history.** Record every test deploy in `docs/DEPLOYMENT-HISTORY.md`. Record only accepted/tagged milestones in `docs/RELEASES.md`.
+4. **An official release = annotated Git tag** pointing at a known-good commit on (or merged to) `main`. The user names the tag.
+5. **Rollback = restore a recorded SHA or tag → rebuild → redeploy.** Not manual file surgery and not “what we think it looked like.”
+6. **A branch may have many development deploys** before it is accepted onto `main`. Redeploy an earlier SHA on that branch without merging.
+7. **Each Forge app has its own tags** (`di-*` vs `legacy-*`). Never mix apps in one tag name.
 
 ---
 
@@ -44,17 +51,17 @@ Shared packages (`packages/shared-jira/`) ship with whichever app imports them; 
 ## Day-to-day change flow
 
 ```
-branch → PR → review → merge main → (optional: tag) → deploy from tag
+fetch → branch from accepted main → commit → (optional: deploy development from that SHA)
+  → record deploy → user tests → accepted → merge main → (user-named tag if milestone)
 ```
 
-1. Create branch: `cursor/<topic>-0bfb`
-2. Change **one product** when possible (see `docs/PRODUCT-INDEX.md`)
-3. Open PR; do not deploy “official” from the branch unless testing
-4. Merge to `main`
-5. If this is a known-good milestone users rely on:
-   - Tag it (script below)
-   - Record it in `docs/RELEASES.md`
-   - Deploy **from the tag**, not from a dirty working tree
+1. Fetch and inspect remote state. Read `docs/DEPLOYMENT-HISTORY.md` so you know what is live.
+2. Create a branch from current accepted `main` (`feature/…`, `fix/…`, `chore/…`). Do not develop on `main`.
+3. Change **one product** when possible (see `docs/PRODUCT-INDEX.md`)
+4. Commit before any Forge deploy. Tree must be clean.
+5. Deploy to `development` from that exact SHA if the user wants a live test. Record the row.
+6. Deploying is not known-good. Wait for user acceptance.
+7. After acceptance: merge to `main`. If the user names a milestone tag, create it and update `docs/RELEASES.md`.
 
 ---
 
@@ -98,18 +105,21 @@ This:
 
 ---
 
-## Rollback to a previous official release
+## Rollback
+
+**Preferred for an official milestone:**
 
 ```bash
 ./scripts/release-rollback.sh di 0.1.0 development
 ```
 
-Same as deploy-from-tag. That **is** the rollback.
-
-Then open the product and confirm. Update `docs/RELEASES.md` “Currently deployed” row.
+**Preferred for a development revision that never reached `main`:**
+check out the recorded SHA from `docs/DEPLOYMENT-HISTORY.md`, rebuild,
+`forge deploy` from that clean commit, then record the new row.
 
 Do **not**:
 
+- Guess a rollback point
 - Manually re-edit files from memory
 - Redeploy random `main` HEAD hoping it matches
 - Mix Delivery Intelligence and legacy root deploys in one command
@@ -120,11 +130,12 @@ Do **not**:
 
 | Env | Purpose |
 |---|---|
-| `development` | Experiments, agent spikes, mobile checks |
-| `staging` | Candidate before production |
-| `production` | Only tagged releases |
+| `development` | Active branch testing (current default) |
+| `staging` | Release-candidate testing |
+| `production` | Accepted production build |
+| Marketplace | Separate from Forge production |
 
-Rule: if the demo site must stay stable, either pin it to a tagged deploy, or run experiments on a different env / site.
+Active work stays in `development` until the user says otherwise.
 
 ---
 
@@ -132,35 +143,29 @@ Rule: if the demo site must stay stable, either pin it to a tagged deploy, or ru
 
 When an agent finishes work:
 
-1. Commit + push the **branch**
-2. Open/update PR
-3. Deploy to `development` only if asked to test live
-4. **Do not create release tags** unless the user says “make this official” / “tag a release”
-5. After a verified known-good: user (or agent if asked) runs `release-tag.sh` + updates `docs/RELEASES.md`
-6. If something breaks after a speculative deploy: **rollback via tag**, then fix on a new branch
+1. Fetch/inspect GitHub first. Do not rely on chat memory alone.
+2. Commit + push the **branch**. Never deploy dirty.
+3. Deploy to `development` only if asked to test live, from that exact SHA.
+4. Append `docs/DEPLOYMENT-HISTORY.md` and report product / branch / SHA / Forge version / env / test+lint / clean tree / build file changes.
+5. **Do not create release tags** unless the user names the tag.
+6. If something breaks: restore the recorded SHA or tag. Do not reconstruct source.
 
 ---
 
 ## Mapping Git ↔ Forge
 
-After each official deploy, record:
+After **every** deploy, record a row in `docs/DEPLOYMENT-HISTORY.md`.
+After an official tagged deploy, also update `docs/RELEASES.md`.
 
-| Field | Example |
-|---|---|
-| Tag | `di-v0.1.0` |
-| Commit SHA | `7743ec7…` |
-| Forge app | Delivery Intelligence |
-| Forge env | `development` |
-| Forge version | `2.12.0` (from deploy output) |
-| Verified | Desktop PLAT sprint OK |
-
-Forge `deploy list` is history, not a substitute for Git tags.
+Forge `deploy list` is not a substitute for Git SHAs or this log.
 
 ---
 
 ## Related
 
-- `docs/RELEASES.md` — registry of tags currently/previously relied on
+- `AGENTS.md` — working rules
+- `docs/DEPLOYMENT-HISTORY.md` — every recorded deploy
+- `docs/RELEASES.md` — official tags only
 - `docs/PRODUCT-INDEX.md` — which product to edit
 - `docs/MULTI-APP-REPO-STRATEGY.md` — monorepo structure
 - `scripts/release-tag.sh` / `release-deploy.sh` / `release-rollback.sh`

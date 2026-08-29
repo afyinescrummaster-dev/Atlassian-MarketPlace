@@ -1,14 +1,60 @@
-import { route } from "@forge/api";
-import {
-  permissionStatus,
-  readJson,
-  requestJira,
-} from "@atlassian-marketplace/shared-jira";
+import api, { route } from "@forge/api";
 import { MAX_CHANGELOG_ISSUES, MAX_SPRINT_ISSUES } from "../delivery-intelligence/constants.js";
+import { failure, logDiag, logEvidence, STAGES } from "../delivery-intelligence/diagnostics.js";
 import {
   extractSprintChanges,
   normalizeIssue,
 } from "../delivery-intelligence/normalize.js";
+
+const SPRINT_ISSUE_FIELDS = [
+  "summary",
+  "status",
+  "issuetype",
+  "assignee",
+  "priority",
+  "created",
+  "updated",
+  "labels",
+  "issuelinks",
+].join(",");
+
+const CHANGELOG_CONCURRENCY = 5;
+
+const permissionStatus = (status) =>
+  status === 401 || status === 403 || status === 404;
+
+const readJson = async (response) => {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
+const requestJira = async (path, options = {}) => {
+  const { headers, ...rest } = options;
+  return api.asUser().requestJira(path, {
+    ...rest,
+    headers: {
+      Accept: "application/json",
+      ...headers,
+    },
+  });
+};
+
+const emptyContext = (projectKey, limitations, board = null) => ({
+  ok: true,
+  context: {
+    projectKey,
+    boardId: board?.id ?? null,
+    boardName: board?.name ?? null,
+  },
+  sprint: null,
+  issues: [],
+  changelogsByKey: {},
+  previousSprint: null,
+  limitations,
+});
 
 export const fetchBoardsForProject = async (projectKey) => {
   const response = await requestJira(
@@ -16,10 +62,34 @@ export const fetchBoardsForProject = async (projectKey) => {
   );
 
   if (permissionStatus(response.status)) {
-    return { ok: false, error: "permission" };
+    return failure({
+      error: "permission",
+      stage: STAGES.FETCH_BOARDS,
+      httpStatus: response.status,
+      projectKey,
+      message: `Could not load Jira Software boards for project ${projectKey}.`,
+    });
   }
+
+  // Business/JSM projects often return 400 from the Software board API.
+  if (response.status === 400) {
+    logDiag("boards-empty", {
+      stage: STAGES.FETCH_BOARDS,
+      httpStatus: 400,
+      projectKey,
+      boardCount: 0,
+    });
+    return { ok: true, boards: [] };
+  }
+
   if (!response.ok) {
-    return { ok: false, error: "unavailable" };
+    return failure({
+      error: "unavailable",
+      stage: STAGES.FETCH_BOARDS,
+      httpStatus: response.status,
+      projectKey,
+      message: `Could not load Jira Software boards for project ${projectKey}.`,
+    });
   }
 
   const payload = (await readJson(response)) ?? {};
@@ -34,16 +104,33 @@ export const fetchBoardsForProject = async (projectKey) => {
   };
 };
 
-export const fetchActiveSprint = async (boardId) => {
+export const fetchActiveSprint = async (boardId, projectKey = null) => {
   const response = await requestJira(
     route`/rest/agile/1.0/board/${boardId}/sprint?state=active`,
   );
 
   if (permissionStatus(response.status)) {
-    return { ok: false, error: "permission" };
+    return failure({
+      error: "permission",
+      stage: STAGES.FETCH_ACTIVE_SPRINT,
+      httpStatus: response.status,
+      projectKey,
+      boardId,
+      message: `Could not load the active sprint for board ${boardId}.`,
+    });
+  }
+  if (response.status === 400) {
+    return { ok: true, sprint: null };
   }
   if (!response.ok) {
-    return { ok: false, error: "unavailable" };
+    return failure({
+      error: "unavailable",
+      stage: STAGES.FETCH_ACTIVE_SPRINT,
+      httpStatus: response.status,
+      projectKey,
+      boardId,
+      message: `Could not load the active sprint for board ${boardId}.`,
+    });
   }
 
   const payload = (await readJson(response)) ?? {};
@@ -61,12 +148,94 @@ export const fetchActiveSprint = async (boardId) => {
       state: sprint.state,
       startDate: sprint.startDate || null,
       endDate: sprint.endDate || null,
+      activatedDate: sprint.activatedDate || null,
       goal: sprint.goal || null,
     },
   };
 };
 
-export const fetchSprintIssues = async (sprintId) => {
+export const fetchSprintById = async (sprintId) => {
+  const response = await requestJira(route`/rest/agile/1.0/sprint/${sprintId}`);
+
+  if (permissionStatus(response.status) || !response.ok) {
+    return { ok: false, sprint: null, httpStatus: response.status };
+  }
+
+  const sprint = (await readJson(response)) ?? {};
+  const dateFields = {};
+  for (const [key, value] of Object.entries(sprint)) {
+    if (/date/i.test(key) || key === "state" || key === "id" || key === "name") {
+      dateFields[key] = value ?? null;
+    }
+  }
+  logEvidence("sprint-detail", { sprintId, httpStatus: response.status, fields: dateFields });
+  return {
+    ok: true,
+    sprint: {
+      id: sprint.id,
+      name: sprint.name,
+      state: sprint.state,
+      startDate: sprint.startDate || null,
+      endDate: sprint.endDate || null,
+      activatedDate: sprint.activatedDate || null,
+      goal: sprint.goal || null,
+    },
+    httpStatus: response.status,
+  };
+};
+
+export const fetchPreviousClosedSprint = async (boardId, beforeIso) => {
+  const beforeMs = beforeIso ? new Date(beforeIso).getTime() : Number.NaN;
+  if (!boardId || Number.isNaN(beforeMs)) {
+    return { ok: true, sprint: null };
+  }
+
+  let startAt = 0;
+  let best = null;
+
+  for (;;) {
+    const response = await requestJira(
+      route`/rest/agile/1.0/board/${boardId}/sprint?state=closed&startAt=${startAt}&maxResults=50`,
+    );
+    if (!response.ok) {
+      logEvidence("previous-sprint-unavailable", {
+        boardId,
+        httpStatus: response.status,
+      });
+      return { ok: false, sprint: null, httpStatus: response.status };
+    }
+
+    const payload = (await readJson(response)) ?? {};
+    const values = Array.isArray(payload.values) ? payload.values : [];
+    for (const row of values) {
+      const ended = row.completeDate || row.endDate;
+      if (!ended) {
+        continue;
+      }
+      const endedMs = new Date(ended).getTime();
+      if (Number.isNaN(endedMs) || endedMs > beforeMs) {
+        continue;
+      }
+      if (!best || endedMs > best.endedMs) {
+        best = { id: row.id, name: row.name, endedMs };
+      }
+    }
+
+    if (payload.isLast === true || values.length === 0) {
+      break;
+    }
+    startAt += values.length;
+    if (startAt >= 200) {
+      break;
+    }
+  }
+
+  const sprint = best ? { id: best.id, name: best.name } : null;
+  logEvidence("previous-sprint", { boardId, previousSprint: sprint });
+  return { ok: true, sprint };
+};
+
+export const fetchSprintIssues = async (sprintId, projectKey = null, boardId = null) => {
   const issues = [];
   let startAt = 0;
   const maxResults = 50;
@@ -74,18 +243,32 @@ export const fetchSprintIssues = async (sprintId) => {
 
   while (issues.length < MAX_SPRINT_ISSUES) {
     const response = await requestJira(
-      route`/rest/agile/1.0/sprint/${sprintId}/issue?startAt=${startAt}&maxResults=${maxResults}`,
+      route`/rest/agile/1.0/sprint/${sprintId}/issue?startAt=${startAt}&maxResults=${maxResults}&fields=${SPRINT_ISSUE_FIELDS}`,
     );
 
     if (permissionStatus(response.status)) {
       return issues.length
         ? { ok: true, issues, truncated: true, partial: true }
-        : { ok: false, error: "permission" };
+        : failure({
+            error: "permission",
+            stage: STAGES.FETCH_SPRINT_ISSUES,
+            httpStatus: response.status,
+            projectKey,
+            boardId,
+            message: `Could not load sprint issues for sprint ${sprintId}.`,
+          });
     }
     if (!response.ok) {
       return issues.length
         ? { ok: true, issues, truncated: true, partial: true }
-        : { ok: false, error: "unavailable" };
+        : failure({
+            error: "unavailable",
+            stage: STAGES.FETCH_SPRINT_ISSUES,
+            httpStatus: response.status,
+            projectKey,
+            boardId,
+            message: `Could not load sprint issues for sprint ${sprintId}.`,
+          });
     }
 
     const payload = (await readJson(response)) ?? {};
@@ -108,16 +291,48 @@ export const fetchSprintIssues = async (sprintId) => {
 };
 
 export const fetchIssueChangelog = async (issueKey) => {
-  const response = await requestJira(
-    route`/rest/api/3/issue/${issueKey}/changelog?maxResults=100`,
-  );
+  const changes = [];
+  let startAt = 0;
+  const maxResults = 100;
 
-  if (!response.ok) {
-    return { ok: false, changes: [] };
+  for (;;) {
+    const response = await requestJira(
+      route`/rest/api/3/issue/${issueKey}/changelog?startAt=${startAt}&maxResults=${maxResults}`,
+    );
+
+    if (!response.ok) {
+      return { ok: changes.length > 0, changes };
+    }
+
+    const payload = (await readJson(response)) ?? {};
+    changes.push(...extractSprintChanges(payload));
+    const values = Array.isArray(payload.values) ? payload.values : [];
+    if (payload.isLast === true || values.length === 0) {
+      break;
+    }
+    startAt += values.length;
+    if (startAt >= 2000) {
+      break;
+    }
   }
 
-  const payload = (await readJson(response)) ?? {};
-  return { ok: true, changes: extractSprintChanges(payload) };
+  return { ok: true, changes };
+};
+
+const mapPool = async (items, concurrency, mapper) => {
+  const results = new Array(items.length);
+  let next = 0;
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
 };
 
 export const fetchChangelogsForIssues = async (issues, limit = MAX_CHANGELOG_ISSUES) => {
@@ -125,16 +340,25 @@ export const fetchChangelogsForIssues = async (issues, limit = MAX_CHANGELOG_ISS
   const slice = issues.slice(0, limit);
   let fetched = 0;
 
-  for (const issue of slice) {
+  if (slice.length === 0) {
+    return {
+      changelogsByKey,
+      fetched,
+      requested: 0,
+      capped: issues.length > limit,
+    };
+  }
+
+  await mapPool(slice, CHANGELOG_CONCURRENCY, async (issue) => {
     if (!issue.key) {
-      continue;
+      return;
     }
     const result = await fetchIssueChangelog(issue.key);
     if (result.ok) {
       changelogsByKey[issue.key] = result.changes;
       fetched += 1;
     }
-  }
+  });
 
   return {
     changelogsByKey,
@@ -147,7 +371,7 @@ export const fetchChangelogsForIssues = async (issues, limit = MAX_CHANGELOG_ISS
 export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
   const boardsResult = await fetchBoardsForProject(projectKey);
   if (!boardsResult.ok) {
-    return { ok: false, error: boardsResult.error };
+    return boardsResult;
   }
 
   const boards = boardsResult.boards;
@@ -156,58 +380,110 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
     boards[0] ||
     null;
 
+  logDiag("boards-selected", {
+    stage: STAGES.FETCH_BOARDS,
+    projectKey,
+    boardCount: boards.length,
+    boardId: selectedBoard?.id ?? null,
+    boardName: selectedBoard?.name || null,
+    boardType: selectedBoard?.type || null,
+  });
+
   if (!selectedBoard) {
-    return {
-      ok: true,
-      context: {
-        projectKey,
-        boardId: null,
-        boardName: null,
-      },
-      sprint: null,
-      issues: [],
-      changelogsByKey: {},
-      limitations: [
-        "No Jira Software board was found for this project. Sprint metrics require a board-backed project.",
-      ],
-    };
+    return emptyContext(projectKey, [
+      "No Jira Software board was found for this project. Sprint metrics require a board-backed Software project with an active sprint.",
+    ]);
   }
 
-  const sprintResult = await fetchActiveSprint(selectedBoard.id);
+  const sprintResult = await fetchActiveSprint(selectedBoard.id, projectKey);
   if (!sprintResult.ok) {
-    return { ok: false, error: sprintResult.error };
+    return sprintResult;
   }
 
   if (!sprintResult.sprint) {
-    return {
-      ok: true,
-      context: {
-        projectKey,
-        boardId: selectedBoard.id,
-        boardName: selectedBoard.name,
-      },
-      sprint: null,
-      issues: [],
+    return emptyContext(
+      projectKey,
+      ["No active sprint was found on the selected board."],
+      selectedBoard,
+    );
+  }
+
+  const sprintDetail = await fetchSprintById(sprintResult.sprint.id);
+  const sprint = sprintDetail.ok && sprintDetail.sprint
+    ? { ...sprintResult.sprint, ...sprintDetail.sprint }
+    : sprintResult.sprint;
+
+  logDiag("sprint-selected", {
+    stage: STAGES.FETCH_ACTIVE_SPRINT,
+    projectKey,
+    boardId: selectedBoard.id,
+    sprintId: sprint.id,
+    startDate: sprint.startDate,
+    activatedDate: sprint.activatedDate,
+    commitmentAt: sprint.activatedDate || sprint.startDate,
+  });
+
+  const issuesResult = await fetchSprintIssues(
+    sprint.id,
+    projectKey,
+    selectedBoard.id,
+  );
+  if (!issuesResult.ok) {
+    return issuesResult;
+  }
+
+  logDiag("sprint-issues", {
+    stage: STAGES.FETCH_SPRINT_ISSUES,
+    projectKey,
+    boardId: selectedBoard.id,
+    sprintId: sprint.id,
+    issueCount: issuesResult.issues.length,
+  });
+
+  let changelogResult;
+  try {
+    changelogResult = await fetchChangelogsForIssues(issuesResult.issues);
+    logDiag("changelog-fetched", {
+      stage: STAGES.FETCH_CHANGELOG,
+      projectKey,
+      boardId: selectedBoard.id,
+      issueCount: changelogResult.fetched,
+    });
+  } catch {
+    logDiag("changelog-failed", {
+      stage: STAGES.FETCH_CHANGELOG,
+      error: "unavailable",
+      projectKey,
+      boardId: selectedBoard.id,
+    });
+    changelogResult = {
       changelogsByKey: {},
-      limitations: ["No active sprint was found on the selected board."],
+      fetched: 0,
+      requested: Math.min(issuesResult.issues.length, MAX_CHANGELOG_ISSUES),
+      capped: true,
     };
   }
 
-  const issuesResult = await fetchSprintIssues(sprintResult.sprint.id);
-  if (!issuesResult.ok) {
-    return { ok: false, error: issuesResult.error };
+  let previousSprint = null;
+  try {
+    const previousResult = await fetchPreviousClosedSprint(
+      selectedBoard.id,
+      sprint.activatedDate || sprint.startDate,
+    );
+    previousSprint = previousResult.ok ? previousResult.sprint : null;
+  } catch {
+    previousSprint = null;
   }
 
-  const changelogResult = await fetchChangelogsForIssues(issuesResult.issues);
   const limitations = [];
   if (issuesResult.truncated) {
     limitations.push(
       `Sprint issue list truncated at ${MAX_SPRINT_ISSUES} issues.`,
     );
   }
-  if (changelogResult.capped) {
+  if (changelogResult.capped || changelogResult.fetched < changelogResult.requested) {
     limitations.push(
-      `Sprint changelog history fetched for the first ${MAX_CHANGELOG_ISSUES} issues only.`,
+      `Sprint changelog history fetched for ${changelogResult.fetched} of ${changelogResult.requested} sampled issues.`,
     );
   }
 
@@ -218,9 +494,10 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
       boardId: selectedBoard.id,
       boardName: selectedBoard.name,
     },
-    sprint: sprintResult.sprint,
+    sprint,
     issues: issuesResult.issues,
     changelogsByKey: changelogResult.changelogsByKey,
+    previousSprint,
     limitations,
   };
 };

@@ -1,11 +1,12 @@
 # Product index
 
-Read **`docs/CHAT-CONTEXT.md`** first for global Forge constraints, secrets, and the
-legacy multi-module app. Then open **one product doc** for the work you are doing.
+Read **`AGENTS.md`** first (working rules). Then **`docs/CHAT-CONTEXT.md`**
+for global Forge constraints. Then open **one product doc**. Check
+**`docs/DEPLOYMENT-HISTORY.md`** before any deploy.
 
 | Working on… | Read first | Code roots | Forge app |
 |---|---|---|---|
-| **Delivery Intelligence** (new) | `docs/products/delivery-intelligence.md` **and** `docs/RECOVERY-2.8.0.md` | `apps/delivery-intelligence/` | Recovered 2.8.0 is `recovery/delivery-intelligence-2.8.0` @ `4f44eb3`, not `di-v0.1.0` |
+| **Delivery Intelligence** (new) | `docs/products/delivery-intelligence.md` **and** `docs/RECOVERY-2.8.0.md` | `apps/delivery-intelligence/` | Separate app — accepted 2.8.0 source is now on `main` (from `4f44eb3`). Tag pending. `di-v0.1.0` is not that source. |
 | Jira Admin Health | `docs/products/admin-health.md` | `src/admin-health/`, `static/admin-health/` | Legacy app (`manifest.yml` at repo root) |
 | Executive Preview | `docs/products/executive-preview.md` | `src/report/`, `static/executive-preview/` | Legacy app |
 | Project Health | `docs/products/project-health.md` | `src/frontend/project-report.jsx` | Legacy app |

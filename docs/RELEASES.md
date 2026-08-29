@@ -2,7 +2,10 @@
 
 Only **tagged** releases belong here. Update this file when you tag or roll back.
 
-> **2026-08-29:** `di-v0.1.0` was tagged after a manual revert that predates this registry. It is **not** the verified Forge 2.8.0 source. See `docs/RECOVERY-2.8.0.md`. Formal process will be updated shortly.
+> **2026-08-29:** `di-v0.1.0` is **not** the verified Forge 2.8.0 source.
+> Accepted 2.8.0 is on `main` from `4f44eb3` (live Forge **2.13.0**).
+> Official replacement tag waits for the user. See `docs/RECOVERY-2.8.0.md`
+> and `docs/DEPLOYMENT-HISTORY.md`.
 
 See process: `docs/RELEASE-PROCESS.md`
 

@@ -57,15 +57,17 @@ test("calculateHealthScore deducts for blocked and scope metrics", () => {
   assert.ok(result.deductions.length >= 3);
 });
 
-test("computeScopeChange counts issues created after sprint start", () => {
+test("computeScopeChange is unavailable without sprint changelog", () => {
   const scope = computeScopeChange({
     issues,
     sprintStart: sprint.startDate,
+    sprintName: sprint.name,
+    sprintId: sprint.id,
     changelogsByKey: {},
   });
-  assert.equal(scope.addedIssueCount, 1);
-  assert.equal(scope.scopeChangePercent, 33);
-  assert.equal(scope.capability.status, "partial");
+  assert.equal(scope.addedIssueCount, null);
+  assert.equal(scope.scopeChangePercent, null);
+  assert.equal(scope.capability.status, "unavailable");
 });
 
 test("computeCarryover unavailable without changelog", () => {
@@ -103,4 +105,44 @@ test("buildHealthSnapshot returns structured fields from real-shaped issue data"
   assert.ok(Array.isArray(snapshot.topAnomalies));
   assert.ok(snapshot.topAnomalies.length > 0);
   assert.equal(snapshot.context.projectKey, "PAY");
+});
+
+test("buildHealthSnapshot uses activatedDate so backdated startDate is not added scope", () => {
+  const snapshot = buildHealthSnapshot({
+    context: { projectKey: "PLAT", boardId: 1, boardName: "PLAT board" },
+    sprint: {
+      id: 42,
+      name: "Sprint 12",
+      startDate: "2025-04-18T12:00:00.000Z",
+      activatedDate: "2026-08-01T09:00:00.000Z",
+      endDate: "2026-08-14T17:00:00.000Z",
+    },
+    issues: [
+      {
+        key: "PLAT-1",
+        summary: "Planned",
+        statusCategoryKey: "new",
+        statusName: "To Do",
+        created: "2026-07-01T09:00:00.000Z",
+        updated: "2026-08-02T09:00:00.000Z",
+        labels: [],
+        blockedLinksCount: 0,
+      },
+    ],
+    changelogsByKey: {
+      "PLAT-1": [
+        {
+          at: "2026-08-01T09:00:20.000Z",
+          from: null,
+          to: "Sprint 12",
+          toId: "42",
+        },
+      ],
+    },
+    now: new Date("2026-08-12T12:00:00.000Z"),
+  });
+
+  assert.equal(snapshot.originalCommittedCount, 1);
+  assert.equal(snapshot.addedIssueCount, 0);
+  assert.equal(snapshot.scopeChangePercent, 0);
 });

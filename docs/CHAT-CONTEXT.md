@@ -18,7 +18,12 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
-- Delivery Intelligence recovered 2.8.0 source: `recovery/delivery-intelligence-2.8.0` @ `4f44eb3` (Forge **2.13.0**). `7743ec7` / `di-v0.1.0` are not that source. See `docs/RECOVERY-2.8.0.md`. Formal process will be updated shortly.
+- Delivery Intelligence: accepted 2.8.0 source is now on `main` (from
+  `4f44eb3`). Verification deploy is development **2.13.0**.
+  `7743ec7` / `di-v0.1.0` are **not** that source. See
+  `docs/RECOVERY-2.8.0.md`. Official tag waits for the user.
+  Git + Forge working rules are in `AGENTS.md`. Deployment log:
+  `docs/DEPLOYMENT-HISTORY.md`.
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -201,21 +206,35 @@ mockup box layout: sidebar, equal summary cards, why-score chips,
 recommended review cards, boxed Project / Custom Field modules with tables.
 Branch `cursor/admin-health-box-ui-0bfb`.
 
+### 2026-08-27 — Delivery Intelligence local laptop deploy 2.1.0
 
-### 2026-08-29 — 2.8.0 was never in Git; first rollback predates process
+Laptop ran Forge setup for the **separate** DI app (not the legacy app ID).
+DI app ID already existed:
+`ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026`.
+Did not register a third app. Built dashboard, deployed development **2.1.0**,
+install on `one-atlas-qzzp.atlassian.net` already current.
 
-Accepted 2.8.0 was deployed from a dirty working tree and not committed.
-The first rollback (`7743ec7`) happened **before** the release/rollback
-structure (`3ade8fd`, `docs/RELEASE-PROCESS.md`). That revert is not a
-restore from a tagged 2.8.0 SHA — Git never had that SHA. `di-v0.1.0`
-is not that source.
+### 2026-08-27 — Delivery Intelligence PLAT scope baseline live
 
-Recovered exact tree: `recovery/delivery-intelligence-2.8.0` @
-`4f44eb315d5cbd9320c42ce150a360bb522c0a44`. Verification deploy: Forge
-development **2.13.0**. Recovered source not merged to `main`.
-Full handoff: `docs/RECOVERY-2.8.0.md`.
+Live PLAT Sprint 2025-04-18H12 accepted at **2.7.0**: 8 original commitment,
+1 added (PLAT-33255), 12.5% scope, 0 carryover, health 82 On Track. Jira's
+sprint report marked all 9 as added because Start-sprint changelog writes
+landed 1–19s after `startDate`. Engine now uses changelog + 2-minute start
+window; carryover only matches the board's previous closed sprint.
+Debug evidence panel removed in **2.8.0**.
 
-**Formal process will be updated shortly.** Do not invent another rollback.
+### 2026-08-29 — 2.8.0 recovered, then merged to `main`
+
+Accepted 2.8.0 was first deployed from a dirty working tree and not
+committed. The first rollback (`7743ec7`) happened **before** the
+release/rollback structure (`3ade8fd`). Git never had the 2.8.0 SHA, so
+that revert could not restore it. `di-v0.1.0` is not that source.
+
+Recovered onto `recovery/delivery-intelligence-2.8.0` at
+`4f44eb315d5cbd9320c42ce150a360bb522c0a44`. Verification: tests 20/20,
+`forge lint` clean, Forge development **2.13.0**. That source is now
+merged to `main`. Git + Forge working rules are locked in `AGENTS.md`.
+Official tag waits for the user. Full handoff: `docs/RECOVERY-2.8.0.md`.
 
 ## Secrets for mobile and Cloud Agents
 
@@ -290,6 +309,9 @@ Upgrade the install only if Forge says a new scope is required.
 
 ## Related docs
 
+- `AGENTS.md` — Git + Forge working rules
+- `docs/DEPLOYMENT-HISTORY.md` — every recorded Forge deploy
+- `docs/RELEASES.md` — official tagged milestones only
 - `docs/MULTI-APP-REPO-STRATEGY.md` — managing multiple products/modules in
   one repo without losing context
 - `docs/PRODUCT-INDEX.md` — agent routing table per product

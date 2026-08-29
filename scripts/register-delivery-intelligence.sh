@@ -24,6 +24,7 @@ cd "$APP_DIR"
 
 echo "==> Install dependencies"
 npm install
+npm install --prefix static/dashboard
 npm run build
 
 if grep -q "^  id: ari:cloud:ecosystem::app/" "$MANIFEST" 2>/dev/null; then

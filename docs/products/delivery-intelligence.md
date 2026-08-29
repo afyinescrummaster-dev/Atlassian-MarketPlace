@@ -3,7 +3,11 @@
 Working product name: **Delivery Intelligence for Jira**  
 Version: **0.1.0** (read-only MVP)  
 Forge app location: `apps/delivery-intelligence/`  
-Status: Recovered 2.8.0 source is `recovery/delivery-intelligence-2.8.0` @ `4f44eb3` (Forge **2.13.0**). `origin/main` rollback `7743ec7` / tag `di-v0.1.0` are **not** that source. See `docs/RECOVERY-2.8.0.md`. Formal process will be updated shortly.
+Status: **Accepted on `main`.** Recovered 2.8.0 source (`4f44eb3`) is
+merged. Live verification deploy is Forge development **2.13.0**
+(UI Build still `2.8.0`). Tag `di-v0.1.0` is **not** this source.
+See `docs/RECOVERY-2.8.0.md`. Official tag waits for the user.
+Working rules: `AGENTS.md`. Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
 
 Forge app ID:
 
@@ -51,10 +55,9 @@ Jira Agile + issue APIs
   → Custom UI dashboard (static/dashboard/)
 
 User clicks AI action
-  → rovo.isEnabled()
-  → rovo.open({ type: "forge", agentKey, prompt with FACTS })
-  → Delivery Intelligence Rovo agent
-  → Optional read-only Forge actions (compact JSON)
+  → rovo.open({ type: "forge", agentKey, short natural-language prompt })
+  → Delivery Intelligence agent calls get-sprint-health-snapshot
+  → Agent explains the sprint from action results
 ```
 
 The deterministic engine has **no Rovo dependency**. Rovo interprets facts; it
@@ -117,9 +120,10 @@ All dashboard numbers come from Jira data via `loadDeliveryContext()` and
 | Metric | Definition | Unavailable when |
 |---|---|---|
 | **Completion %** | Done issues / sprint issues × 100 | No active sprint or no issues |
-| **Scope change %** | Issues added after sprint start / total × 100 | Sprint start date missing |
-| **Added issue count** | Changelog sprint field after start + created-after-start fallback | Partial if changelog capped |
-| **Carryover count** | Open issues moved from prior sprint via sprint changelog | No changelog fetched |
+| **Scope change %** | Added after start / original commitment × 100 | Sprint start missing or no sprint changelog |
+| **Original commitment** | Issues already in the sprint at or before start | No sprint changelog |
+| **Added issue count** | First join of current sprint strictly after start | No sprint changelog |
+| **Carryover count** | Open issues with a different prior sprint in changelog | No sprint changelog |
 | **Blocked count** | Open issues with blocked status/label or blocking link types | Never (best-effort on link metadata) |
 | **Stale count** | Open issues with no update ≥ 7 days | Never |
 
@@ -129,6 +133,12 @@ Capabilities object on snapshot:
 - `capabilities.carryover.status`: `available` | `partial` | `unavailable`
 
 Never fabricate unavailable metrics — UI shows `—`.
+
+Sprint baseline rule: membership at the last sprint-field changelog with
+timestamp **≤ sprint start** is original commitment. First join **strictly
+after** start is added scope. Carryover requires a *different* prior sprint
+in changelog plus current-sprint membership, and the issue must still not be
+Done. No created-date fallback and no 24-hour carryover window.
 
 ---
 
@@ -159,6 +169,7 @@ Implementation: `src/delivery-intelligence/score.js`
 `getDeliveryHealth` / Rovo actions return:
 
 - `healthScore`, `healthStatus`, `healthMax`
+- `originalCommittedCount`, `currentIssueCount`, `addedIssueCount`, `scopeChangePercent`
 - `completionPercent`, `scopeChangePercent`
 - `addedIssueCount`, `carryoverCount`, `blockedCount`, `staleCount`
 - `topAnomalies[]` (ranked list)
@@ -303,6 +314,8 @@ root manifest still targets the legacy app only.
 
 ## Related docs
 
+- `AGENTS.md` — Git + Forge working rules
+- `docs/DEPLOYMENT-HISTORY.md` — every recorded Forge deploy
 - `docs/RECOVERY-2.8.0.md` — 2.8.0 recovery handoff (read before rollback)
 - `docs/PRODUCT-INDEX.md`
 - `docs/MULTI-APP-REPO-STRATEGY.md`
