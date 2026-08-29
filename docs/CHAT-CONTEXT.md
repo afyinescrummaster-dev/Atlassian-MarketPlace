@@ -18,6 +18,7 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
+- Delivery Intelligence (separate app): development **2.8.0**
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -199,6 +200,23 @@ Converted Admin Health to Custom UI (`static/admin-health/`) to match the
 mockup box layout: sidebar, equal summary cards, why-score chips,
 recommended review cards, boxed Project / Custom Field modules with tables.
 Branch `cursor/admin-health-box-ui-0bfb`.
+
+### 2026-08-27 — Delivery Intelligence local laptop deploy 2.1.0
+
+Laptop ran Forge setup for the **separate** DI app (not the legacy app ID).
+DI app ID already existed:
+`ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026`.
+Did not register a third app. Built dashboard, deployed development **2.1.0**,
+install on `one-atlas-qzzp.atlassian.net` already current.
+
+### 2026-08-27 — Delivery Intelligence PLAT scope baseline live
+
+Live PLAT Sprint 2025-04-18H12 accepted at **2.7.0**: 8 original commitment,
+1 added (PLAT-33255), 12.5% scope, 0 carryover, health 82 On Track. Jira's
+sprint report marked all 9 as added because Start-sprint changelog writes
+landed 1–19s after `startDate`. Engine now uses changelog + 2-minute start
+window; carryover only matches the board's previous closed sprint.
+Debug evidence panel removed in **2.8.0**.
 
 ## Secrets for mobile and Cloud Agents
 

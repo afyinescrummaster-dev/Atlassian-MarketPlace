@@ -1,6 +1,7 @@
 import { buildSnapshotForProject } from "./delivery-dashboard.js";
 import { loadDeliveryContext } from "../jira/agile-client.js";
 import { computeScopeChange, computeCarryover } from "../delivery-intelligence/metrics.js";
+import { commitmentTimestamp } from "../delivery-intelligence/membership.js";
 
 const readProjectKey = (payload) => {
   const direct =
@@ -29,6 +30,8 @@ const compactSnapshot = (snapshot) => {
     healthStatus: snapshot.healthStatus,
     completionPercent: snapshot.completionPercent,
     scopeChangePercent: snapshot.scopeChangePercent,
+    originalCommittedCount: snapshot.originalCommittedCount,
+    currentIssueCount: snapshot.currentIssueCount,
     addedIssueCount: snapshot.addedIssueCount,
     carryoverCount: snapshot.carryoverCount,
     blockedCount: snapshot.blockedCount,
@@ -110,13 +113,17 @@ export const getScopeChanges = async (payload) => {
 
   const scope = computeScopeChange({
     issues: loaded.issues,
-    sprintStart: loaded.sprint.startDate,
+    sprintStart: commitmentTimestamp(loaded.sprint),
+    sprintName: loaded.sprint.name,
+    sprintId: loaded.sprint.id,
     changelogsByKey: loaded.changelogsByKey,
   });
 
   return {
     projectKey,
     sprint: { id: loaded.sprint.id, name: loaded.sprint.name },
+    originalCommittedCount: scope.originalCommittedCount,
+    currentIssueCount: scope.currentIssueCount,
     addedIssueCount: scope.addedIssueCount,
     scopeChangePercent: scope.scopeChangePercent,
     capability: scope.capability,
@@ -139,9 +146,11 @@ export const getCarryoverHistory = async (payload) => {
 
   const carryover = computeCarryover({
     issues: loaded.issues,
-    sprintStart: loaded.sprint.startDate,
+    sprintStart: commitmentTimestamp(loaded.sprint),
     sprintName: loaded.sprint.name,
+    sprintId: loaded.sprint.id,
     changelogsByKey: loaded.changelogsByKey,
+    previousSprint: loaded.previousSprint,
   });
 
   return {

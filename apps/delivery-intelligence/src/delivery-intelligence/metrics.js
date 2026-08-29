@@ -1,5 +1,9 @@
 import { daysBetween, isBlockedIssue, isDone, isStaleIssue } from "./normalize.js";
 import { CAPABILITY_STATUS, STALE_DAYS } from "./constants.js";
+import {
+  classifyIssueSprintHistory,
+  roundScopePercent,
+} from "./membership.js";
 
 export const computeCompletion = (issues) => {
   if (!issues.length) {
@@ -13,9 +17,38 @@ export const computeCompletion = (issues) => {
   };
 };
 
-export const computeScopeChange = ({ issues, sprintStart, changelogsByKey }) => {
+const classifyIssues = ({
+  issues,
+  sprintStart,
+  sprintName,
+  sprintId,
+  changelogsByKey,
+  previousSprint = null,
+}) =>
+  (issues || []).map((issue) => ({
+    issue,
+    classification: classifyIssueSprintHistory({
+      changes: changelogsByKey?.[issue.key] || [],
+      sprintStart,
+      sprintName,
+      sprintId,
+      previousSprint,
+    }),
+  }));
+
+export const computeScopeChange = ({
+  issues,
+  sprintStart,
+  sprintName,
+  sprintId,
+  changelogsByKey,
+}) => {
+  const currentIssueCount = (issues || []).length;
+
   if (!sprintStart) {
     return {
+      originalCommittedCount: null,
+      currentIssueCount,
       addedIssueCount: null,
       scopeChangePercent: null,
       capability: {
@@ -25,61 +58,47 @@ export const computeScopeChange = ({ issues, sprintStart, changelogsByKey }) => 
     };
   }
 
-  const startMs = new Date(sprintStart).getTime();
-  let addedIssueCount = 0;
-  let analyzedWithHistory = 0;
+  const classified = classifyIssues({
+    issues,
+    sprintStart,
+    sprintName,
+    sprintId,
+    changelogsByKey,
+  });
+  const known = classified.filter((row) => row.classification.status === "classified");
+  const unknownCount = classified.length - known.length;
+  const addedIssueCount = known.filter((row) => row.classification.added).length;
+  const committedKnown = known.filter((row) => row.classification.committed).length;
+  const originalCommittedCount = committedKnown + unknownCount;
 
-  for (const issue of issues) {
-    const changes = changelogsByKey?.[issue.key] || [];
-    if (changes.length > 0) {
-      analyzedWithHistory += 1;
-      const addedViaSprintField = changes.some((change) => {
-        const atMs = new Date(change.at).getTime();
-        return atMs >= startMs && change.to && !change.from;
-      });
-      if (addedViaSprintField) {
-        addedIssueCount += 1;
-        continue;
-      }
-      const movedIntoSprint = changes.some((change) => {
-        const atMs = new Date(change.at).getTime();
-        return atMs >= startMs && change.to && change.from !== change.to;
-      });
-      if (movedIntoSprint) {
-        addedIssueCount += 1;
-        continue;
-      }
-    }
-
-    const createdMs = issue.created ? new Date(issue.created).getTime() : null;
-    if (createdMs != null && createdMs >= startMs) {
-      addedIssueCount += 1;
-    }
+  if (known.length === 0) {
+    return {
+      originalCommittedCount: null,
+      currentIssueCount,
+      addedIssueCount: null,
+      scopeChangePercent: null,
+      capability: {
+        status: CAPABILITY_STATUS.UNAVAILABLE,
+        reason:
+          "Sprint changelog history was not available, so original commitment versus added scope could not be proven.",
+      },
+    };
   }
 
-  const total = issues.length || 1;
-  const capability =
-    changelogsByKey && Object.keys(changelogsByKey).length > 0
-      ? analyzedWithHistory < issues.length
-        ? {
-            status: CAPABILITY_STATUS.PARTIAL,
-            reason:
-              "Scope change uses sprint changelog where available; remaining issues use created date only.",
-          }
-        : {
-            status: CAPABILITY_STATUS.AVAILABLE,
-            reason: "Derived from sprint field changelog and issue created dates.",
-          }
-      : {
-          status: CAPABILITY_STATUS.PARTIAL,
-          reason:
-            "Sprint changelog was not fetched; scope change uses issue created dates after sprint start only.",
-        };
-
   return {
+    originalCommittedCount,
+    currentIssueCount,
     addedIssueCount,
-    scopeChangePercent: Math.round((addedIssueCount / total) * 100),
-    capability,
+    scopeChangePercent: roundScopePercent(addedIssueCount, originalCommittedCount),
+    capability: {
+      status:
+        unknownCount > 0 ? CAPABILITY_STATUS.PARTIAL : CAPABILITY_STATUS.AVAILABLE,
+      reason:
+        unknownCount > 0
+          ? "Some issues had no sprint changelog; they are not counted as added scope."
+          : "Original commitment is sprint membership at or before sprint activation, including Jira's start-sprint field write in the activation window. Added scope is first join strictly after that window.",
+      source: "changelog",
+    },
   };
 };
 
@@ -87,7 +106,9 @@ export const computeCarryover = ({
   issues,
   sprintStart,
   sprintName,
+  sprintId,
   changelogsByKey,
+  previousSprint = null,
 }) => {
   if (!sprintStart || !sprintName) {
     return {
@@ -100,50 +121,47 @@ export const computeCarryover = ({
     };
   }
 
-  if (!changelogsByKey || Object.keys(changelogsByKey).length === 0) {
+  const classified = classifyIssues({
+    issues,
+    sprintStart,
+    sprintName,
+    sprintId,
+    changelogsByKey,
+    previousSprint,
+  });
+  const known = classified.filter((row) => row.classification.status === "classified");
+
+  if (known.length === 0) {
     return {
       carryoverCount: null,
       carryoverIssueKeys: [],
       capability: {
         status: CAPABILITY_STATUS.UNAVAILABLE,
         reason:
-          "Carryover requires sprint field changelog history; none was retrieved for this snapshot.",
+          "Carryover requires sprint field changelog that names a different prior sprint.",
       },
     };
   }
 
-  const startMs = new Date(sprintStart).getTime();
-  const carryoverIssueKeys = [];
-
-  for (const issue of issues) {
-    if (isDone(issue)) {
-      continue;
-    }
-    const changes = changelogsByKey[issue.key] || [];
-    const carried = changes.some((change) => {
-      const atMs = new Date(change.at).getTime();
-      const mentionsCurrent =
-        (change.to || "").includes(sprintName) ||
-        String(change.toId || "") === String(issue.sprintId || "");
-      return (
-        atMs <= startMs + 86400000 &&
-        mentionsCurrent &&
-        change.from &&
-        change.from !== change.to
-      );
-    });
-    if (carried) {
-      carryoverIssueKeys.push(issue.key);
-    }
-  }
+  const carryoverIssueKeys = classified
+    .filter(
+      (row) =>
+        row.classification.carryover &&
+        !isDone(row.issue) &&
+        row.classification.priorSprints.length > 0,
+    )
+    .map((row) => row.issue.key);
 
   return {
     carryoverCount: carryoverIssueKeys.length,
     carryoverIssueKeys,
     capability: {
-      status: CAPABILITY_STATUS.AVAILABLE,
+      status:
+        known.length < classified.length
+          ? CAPABILITY_STATUS.PARTIAL
+          : CAPABILITY_STATUS.AVAILABLE,
       reason:
-        "Issues moved into this sprint from another sprint before/at sprint start and still open.",
+        "Carryover requires the board's previous closed sprint in changelog, then membership in the current sprint, while the issue is still not Done.",
     },
   };
 };

@@ -7,6 +7,68 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-27 — [Delivery Intelligence] PLAT live baseline accepted
+
+### Goal
+Fix 0 committed / 9 added / 9 carryover on PLAT.
+
+### Done
+- Live evidence: Jira sprint report listed all 9 as added; changelog showed 8 joins 1–19s after start and PLAT-33255 at +12 min
+- Scope uses changelog + start-sprint window, not sprint-report
+- Carryover only if the board's previous closed sprint appears in history
+- Live accept: 8 original, 1 added, 12.5% scope, 0 carryover, health 82
+- Removed classification-evidence debug UI in 2.8.0
+
+---
+
+## 2026-08-27 — [Delivery Intelligence] sprint baseline + Rovo prompt
+
+### Goal
+Stop over-classifying PLAT scope/carryover; hide JSON FACTS from Rovo chat.
+
+### Done
+- Reconstruct sprint membership from changelog; added = first join strictly after start
+- Scope % = added / original commitment
+- Carryover requires a different prior sprint and still-open issue
+- Rovo `rovo.open()` now sends a short natural-language prompt; agent fetches snapshot via action
+- Unit tests for commitment, 12.5% PLAT case, carryover, missing history
+
+---
+
+## 2026-08-27 — [Delivery Intelligence] sprint analyze error
+
+### Goal
+Fix “We couldn’t analyze this sprint right now” on the project page.
+
+### Done
+- Removed `"type": "module"` from the DI Forge `package.json` (same Resolver/`api.asUser` trap as the legacy app)
+- Jira Agile client now uses `import api, { route } from "@forge/api"` directly
+- Board HTTP 400 treated as “no Software board” instead of a hard failure
+- Sprint issue fetch limited to needed fields; changelogs fetched in parallel
+- Error UI shows a safe error code
+
+---
+
+## 2026-08-27 — [Delivery Intelligence] local laptop deploy 2.1.0
+
+### Goal
+Run Delivery Intelligence Forge setup on the laptop (separate app ID, not
+the legacy Admin Health app).
+
+### Done
+- Confirmed Forge login as Akeem (`afyineagilecoach@gmail.com`)
+- Did **not** mint a third app ID: DI was already registered as
+  `ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026`
+- Installed `static/dashboard` deps (setup script missed this) and built UI
+- `forge lint` clean; deployed development **2.1.0**
+- Install on `one-atlas-qzzp.atlassian.net` already at latest (upgrade no-op)
+
+### Open
+- Open a Jira Software project → **Delivery Intelligence** to verify live UI
+- Setup script should `npm install --prefix static/dashboard` before build
+
+---
+
 ## 2026-08-27 — [Delivery Intelligence] v0.1 monorepo foundation
 
 ### Goal

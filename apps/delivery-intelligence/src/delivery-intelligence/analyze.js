@@ -1,4 +1,5 @@
 import { calculateHealthScore } from "./score.js";
+import { commitmentTimestamp } from "./membership.js";
 import {
   computeBlocked,
   computeCarryover,
@@ -25,7 +26,6 @@ export const buildTopAnomalies = ({
   blockedIssues,
   staleIssues,
   completionPercent,
-  capabilities,
 }) => {
   const anomalies = [];
 
@@ -34,7 +34,7 @@ export const buildTopAnomalies = ({
       id: "scope-increase",
       severity: severityFor("scope-change"),
       title: `Sprint scope increased ${scopeChangePercent ?? 0}%`,
-      summary: `${addedIssueCount} issue${addedIssueCount === 1 ? "" : "s"} ${capabilities?.scopeChange?.status === "unavailable" ? "may have been" : "were"} added after sprint start.`,
+      summary: `${addedIssueCount} issue${addedIssueCount === 1 ? "" : "s"} added after sprint start against the original commitment.`,
       metric: "scopeChangePercent",
       value: scopeChangePercent,
     });
@@ -51,7 +51,7 @@ export const buildTopAnomalies = ({
     });
   }
 
-  for (const issue of blockedIssues.slice(0, 5)) {
+  for (const issue of (blockedIssues || []).slice(0, 5)) {
     anomalies.push({
       id: `blocked-${issue.key}`,
       severity: "High",
@@ -66,7 +66,7 @@ export const buildTopAnomalies = ({
     });
   }
 
-  for (const issue of staleIssues.slice(0, 3)) {
+  for (const issue of (staleIssues || []).slice(0, 3)) {
     anomalies.push({
       id: `stale-${issue.key}`,
       severity: "Review",
@@ -104,19 +104,25 @@ export const buildHealthSnapshot = ({
   sprint,
   issues,
   changelogsByKey = {},
+  previousSprint = null,
   now = new Date(),
 }) => {
   const completion = computeCompletion(issues);
+  const sprintStart = commitmentTimestamp(sprint);
   const scope = computeScopeChange({
     issues,
-    sprintStart: sprint?.startDate,
+    sprintStart,
+    sprintName: sprint?.name,
+    sprintId: sprint?.id,
     changelogsByKey,
   });
   const carryover = computeCarryover({
     issues,
-    sprintStart: sprint?.startDate,
+    sprintStart,
     sprintName: sprint?.name,
+    sprintId: sprint?.id,
     changelogsByKey,
+    previousSprint,
   });
   const blocked = computeBlocked(issues, now);
   const stale = computeStale(issues, now);
@@ -145,10 +151,6 @@ export const buildHealthSnapshot = ({
     blockedIssues: blocked.blockedIssues,
     staleIssues: stale.staleIssues,
     completionPercent: completion.completionPercent,
-    capabilities: {
-      scopeChange: scope.capability,
-      carryover: carryover.capability,
-    },
   });
 
   return {
@@ -161,6 +163,8 @@ export const buildHealthSnapshot = ({
     healthStatus: health.status,
     completionPercent: completion.completionPercent,
     scopeChangePercent: scope.scopeChangePercent,
+    originalCommittedCount: scope.originalCommittedCount,
+    currentIssueCount: scope.currentIssueCount ?? completion.totalCount,
     addedIssueCount: scope.addedIssueCount,
     carryoverCount: carryover.carryoverCount,
     blockedCount: blocked.blockedCount,
