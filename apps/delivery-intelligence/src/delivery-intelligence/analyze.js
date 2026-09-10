@@ -8,6 +8,16 @@ import {
   computeScopeChange,
   computeStale,
 } from "./metrics.js";
+import { computeReadiness } from "./readiness.js";
+import { computeDeliveryPace } from "./pace.js";
+import { computeCompoundRisks } from "./compound-risks.js";
+import {
+  buildCoachingInterventions,
+  buildRetrospectiveQuestions,
+} from "./coaching.js";
+import { computeHistoricalPatterns } from "./history-patterns.js";
+import { buildBriefs } from "./briefs.js";
+import { CAPABILITY_STATUS } from "./constants.js";
 
 const dayLabel = (count) => `${count} day${count === 1 ? "" : "s"}`;
 
@@ -248,13 +258,28 @@ const buildComparison = ({
   });
 };
 
+const defaultEstimation = {
+  usable: false,
+  fieldId: null,
+  fieldName: null,
+  estimatedIssueCount: 0,
+  coverage: 0,
+  capability: {
+    status: CAPABILITY_STATUS.UNAVAILABLE,
+    reason: "Board estimation model was not provided.",
+  },
+};
+
 export const buildHealthSnapshot = ({
   context,
   sprint,
   issues,
   changelogsByKey = {},
+  statusHistoriesByKey = {},
+  estimation = null,
   previousSprint = null,
   previousSprintContext = null,
+  historicalSprintContexts = [],
   now = new Date(),
 }) => {
   const facts = computeSprintFacts({
@@ -265,6 +290,7 @@ export const buildHealthSnapshot = ({
     now,
   });
   const { completion, scope, carryover, blocked, stale, health } = facts;
+  const estimationModel = estimation || defaultEstimation;
 
   const limitations = [];
   if (scope.capability.status === "unavailable") {
@@ -297,6 +323,123 @@ export const buildHealthSnapshot = ({
     completionPercent: completion.completionPercent,
     doneCount: completion.doneCount,
     totalIssueCount: completion.totalCount,
+  });
+
+  // Sprint goal must never affect readiness or health.
+  const readiness = computeReadiness({
+    issues,
+    sprint,
+    scope,
+    carryover,
+    blocked,
+    estimation: estimationModel,
+    now,
+  });
+
+  const pace = computeDeliveryPace({
+    issues,
+    sprint,
+    scope,
+    blocked,
+    carryoverIssueKeys: carryover.carryoverIssueKeys || [],
+    statusHistoriesByKey,
+    estimation: estimationModel,
+    now,
+  });
+
+  const compoundRisks = computeCompoundRisks({
+    issues,
+    readinessFindings: readiness.findings,
+    paceSignals: pace.signals,
+    blocked,
+    stale,
+    scope,
+    carryover,
+  });
+
+  const historicalContextsWithFacts = (historicalSprintContexts || [])
+    .filter((row) => row?.sprint && row.issues)
+    .map((row) => {
+      const asOf = row.sprint.completeDate || row.sprint.endDate || now;
+      return {
+        ...row,
+        facts: computeSprintFacts({
+          sprint: row.sprint,
+          issues: row.issues,
+          changelogsByKey: row.changelogsByKey || {},
+          previousSprint: row.previousPreviousSprint || null,
+          now: asOf instanceof Date ? asOf : new Date(asOf),
+        }),
+      };
+    });
+
+  // Fall back to the single previous sprint context when the richer list is empty.
+  if (
+    historicalContextsWithFacts.length === 0 &&
+    previousSprint &&
+    previousSprintContext?.issues
+  ) {
+    const asOf =
+      previousSprint.completeDate || previousSprint.endDate || now;
+    historicalContextsWithFacts.push({
+      sprint: previousSprint,
+      issues: previousSprintContext.issues,
+      changelogsByKey: previousSprintContext.changelogsByKey || {},
+      previousPreviousSprint: previousSprintContext.previousPreviousSprint || null,
+      partial: previousSprintContext.partial,
+      facts: computeSprintFacts({
+        sprint: previousSprint,
+        issues: previousSprintContext.issues,
+        changelogsByKey: previousSprintContext.changelogsByKey || {},
+        previousSprint: previousSprintContext.previousPreviousSprint || null,
+        now: asOf instanceof Date ? asOf : new Date(asOf),
+      }),
+    });
+  }
+
+  const historicalPatterns = computeHistoricalPatterns({
+    currentFacts: facts,
+    historicalContexts: historicalContextsWithFacts,
+  });
+
+  const coaching = buildCoachingInterventions({
+    readiness,
+    pace,
+    compoundRisks,
+    scope,
+    carryover,
+    blocked,
+    comparison,
+  });
+
+  const retrospectiveQuestions = buildRetrospectiveQuestions({
+    coachingInterventions: coaching.interventions,
+    historicalPatterns,
+    readiness,
+    pace,
+  });
+
+  const briefs = buildBriefs({
+    snapshotCore: {
+      context,
+      sprint,
+      healthScore: health.score,
+      healthStatus: health.status,
+      completionPercent: completion.completionPercent,
+      originalCommittedCount: scope.originalCommittedCount,
+      currentIssueCount: scope.currentIssueCount ?? completion.totalCount,
+      addedIssueCount: scope.addedIssueCount,
+      scopeChangePercent: scope.scopeChangePercent,
+      carryoverCount: carryover.carryoverCount,
+      blockedCount: blocked.blockedCount,
+      staleCount: stale.staleCount,
+    },
+    readiness,
+    pace,
+    compoundRisks,
+    coachingInterventions: coaching.interventions,
+    historicalPatterns,
+    retrospectiveQuestions,
   });
 
   return {
@@ -336,11 +479,42 @@ export const buildHealthSnapshot = ({
     previousSprintMetrics: comparison.previousSprintMetrics,
     metricDeltas: comparison.metricDeltas,
     comparison,
+    readiness,
+    readinessFindings: readiness.findings,
+    sprintPace: pace.sprintPace,
+    deliveryPace: pace,
+    compoundRisks,
+    coachingInterventions: coaching.interventions,
+    historicalPatterns,
+    retrospectiveQuestions: retrospectiveQuestions.questions,
+    briefs: {
+      teamUpdate: briefs.teamUpdate,
+      leadershipBrief: briefs.leadershipBrief,
+      retrospectiveSummary: briefs.retrospectiveSummary,
+    },
+    estimation: estimationModel,
     capabilities: {
       scopeChange: scope.capability,
       carryover: carryover.capability,
       scopeRemovals: scope.removals,
       comparison: comparison.capability,
+      readiness: {
+        status: CAPABILITY_STATUS.AVAILABLE,
+        reason: "Readiness findings use issue fields and deterministic heuristics.",
+      },
+      descriptionQuality: readiness.capabilities?.descriptionQuality,
+      acceptanceCriteriaDetection: readiness.capabilities?.acceptanceCriteriaDetection,
+      estimationCoverage: readiness.capabilities?.estimationCoverage,
+      assignmentCoverage: readiness.capabilities?.assignmentCoverage,
+      largeIssueDetection: readiness.capabilities?.largeIssueDetection,
+      dependencyContext: readiness.capabilities?.dependencyContext,
+      sprintPace: pace.sprintPace?.capability,
+      agingWork: pace.agingWork?.capability,
+      compoundRisks: compoundRisks.capability,
+      coaching: coaching.capability,
+      historicalPatterns: historicalPatterns.capability,
+      retrospectiveQuestions: retrospectiveQuestions.capability,
+      briefs: briefs.capability,
     },
     limitations,
   };

@@ -52,6 +52,49 @@ const compactSnapshot = (snapshot) => {
     staleCount: snapshot.staleCount,
     staleIssueKeys: (snapshot.staleIssues || []).slice(0, 10).map((row) => row.key),
     topAnomalies: (snapshot.topAnomalies || []).slice(0, 5).map(compactAnomaly),
+    readinessAssessment: snapshot.readiness?.assessment || null,
+    readinessFindingCount: snapshot.readinessFindings?.length ?? null,
+    readinessFindings: (snapshot.readinessFindings || []).slice(0, 8).map((row) => ({
+      severity: row.severity,
+      issueKey: row.issueKey,
+      signalType: row.signalType,
+      explanation: row.explanation,
+      suggestedAction: row.suggestedAction,
+    })),
+    sprintPace: snapshot.sprintPace
+      ? {
+          elapsedPercent: snapshot.sprintPace.elapsedPercent,
+          completedPercent: snapshot.sprintPace.completedPercent,
+          pacingState: snapshot.sprintPace.pacingState,
+          measurementBasis: snapshot.sprintPace.measurementBasis,
+          openWorkRemaining: snapshot.sprintPace.openWorkRemaining,
+        }
+      : null,
+    compoundRiskCounts: snapshot.compoundRisks?.counts || null,
+    compoundRisks: (snapshot.compoundRisks?.items || []).slice(0, 8).map((row) => ({
+      issueKey: row.issueKey,
+      attentionLevel: row.attentionLevel,
+      riskCodes: row.riskCodes,
+      summary: row.summary,
+    })),
+    coachingInterventions: (snapshot.coachingInterventions || []).slice(0, 5).map((row) => ({
+      id: row.id,
+      attentionLevel: row.attentionLevel,
+      title: row.title,
+      evidence: row.evidence,
+      interpretation: row.interpretation,
+      suggestedIntervention: row.suggestedIntervention,
+      issueKeys: (row.issueKeys || []).slice(0, 5),
+    })),
+    historicalPatterns: (snapshot.historicalPatterns?.patterns || []).slice(0, 5),
+    retrospectiveQuestions: (snapshot.retrospectiveQuestions || []).slice(0, 5),
+    briefs: snapshot.briefs
+      ? {
+          teamUpdate: snapshot.briefs.teamUpdate?.plain || null,
+          leadershipBrief: snapshot.briefs.leadershipBrief?.plain || null,
+          retrospectiveSummary: snapshot.briefs.retrospectiveSummary?.plain || null,
+        }
+      : null,
     previousSprint: snapshot.previousSprint,
     previousSprintMetrics: snapshot.previousSprintMetrics,
     metricDeltas: snapshot.metricDeltas,

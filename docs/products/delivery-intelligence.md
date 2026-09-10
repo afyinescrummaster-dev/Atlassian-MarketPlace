@@ -1,11 +1,13 @@
 # Delivery Intelligence for Jira
 
 Working product name: **Delivery Intelligence for Jira**  
-Version: **1.1.0** — Sprint Intelligence  
+Version: **1.1.0+** — Sprint Coaching / Readiness (working increment on
+`feature/sprint-coaching-readiness`; not an official `di-v*` tag yet)  
 Forge app location: `apps/delivery-intelligence/`  
-Status: **`di-v1.1.0`** — Sprint Intelligence, merged to `main`. Live
-Forge development **2.18.0** (`deploy/di/development/2.18.0`, UI Build
-`2.9.2`). V1 baseline `di-v1.0.0` @ `c780ff5` remains. Historical
+Status: **`di-v1.1.0`** remains the latest official milestone on `main`
+(Sprint Intelligence). This branch evolves DI into an evidence-based
+Agile coaching assistant. Live Forge development was **2.18.0** before
+this increment. V1 baseline `di-v1.0.0` @ `c780ff5` remains. Historical
 recovered known-good remains `di-v0.1.1` @ `4f44eb3` — do not delete.
 See `docs/RECOVERY-2.8.0.md`. Working rules: `AGENTS.md`. Deploy log:
 `docs/DEPLOYMENT-HISTORY.md`.
@@ -23,10 +25,51 @@ Demo site: `https://one-atlas-qzzp.atlassian.net` — open any Jira Software pro
 Delivery teams need to understand sprint health quickly: what is blocked, what
 scope changed after sprint start, what carried over, and what needs attention.
 Leaders want concise risk explanations without manual spreadsheet work.
+Coaches need readiness and pacing signals that stay honest about evidence
+limits — especially acceptance criteria detection.
 
 This product answers: **What needs attention in the current sprint, and why?**
+and increasingly: **What should the team clarify, finish, or learn next?**
 
 ---
+
+## Working increment — Sprint Coaching / Readiness
+
+Branch: `feature/sprint-coaching-readiness` (do not merge until accepted;
+do not create a `di-v*` tag unless the user names one).
+
+Adds deterministic coaching layers on the `di-v1.1.0` baseline:
+
+- Sprint readiness (description quality, cautious AC detection, estimates,
+  assignees, blockers, carryover, stale-at-start, large-issue heuristic,
+  dependency context)
+- Delivery pace (elapsed vs completed, WIP, aging, blocker duration,
+  late additions, status churn / reopen, workflow accumulation, ownership
+  concentration as a review signal — not performance language)
+- Compound per-issue risks with attention levels
+  `critical` / `high` / `medium` / `informational`
+- Coaching interventions that separate **Evidence / Interpretation /
+  Suggested intervention**
+- Historical patterns across up to 3 completed sprints
+- Retrospective questions
+- Brief builder: Team Update / Leadership Brief / Retrospective Summary
+  (copy plain, copy markdown, open in Rovo)
+- Dashboard UI Build `2.10.0` sections: Sprint Diagnosis, Sprint Readiness,
+  Delivery Pace, Scope and Risk, Coach's Attention, Learning Across Sprints,
+  Brief Builder / AI Actions
+
+**Hard rules preserved**
+
+- Health-score formula unchanged
+- Sprint goal never affects readiness or health
+- Membership / carryover classification unchanged (status changelog is
+  separate; sprint membership still filters `field === 'sprint'` or no field)
+- Capability states never convert unavailable → zero
+- No auto Rovo invoke; existing Rovo intents remain natural language
+- No Admin Health or Forge app ID changes
+
+New read scope (major upgrade on install):
+`read:board-scope.admin:jira-software` for board estimation configuration.
 
 ## `di-v1.1.0` — Sprint Intelligence
 
@@ -112,10 +155,11 @@ See also: `docs/ROVO-DELIVERY-INTELLIGENCE-ARCHITECTURE.md`
 | Dashboard resolver | `src/resolvers/delivery-dashboard.js` |
 | Rovo action handlers | `src/resolvers/rovo-actions.js` |
 | Domain engine | `src/delivery-intelligence/` |
+| Readiness / pace / coaching | `readiness.js`, `pace.js`, `compound-risks.js`, `coaching.js`, `history-patterns.js`, `briefs.js`, `description-quality.js`, `thresholds.js` |
 | Jira Agile client | `src/jira/agile-client.js` |
 | Custom UI | `static/dashboard/` |
 | Agent prompt | `resources/agent-prompts/delivery-agent.txt` |
-| Unit tests | `test/analyze.test.js` |
+| Unit tests | `test/*.test.js` |
 | Shared Jira helpers | `packages/shared-jira/` |
 
 ---
@@ -140,6 +184,7 @@ See also: `docs/ROVO-DELIVERY-INTELLIGENCE-ARCHITECTURE.md`
 | `read:jira-work` | Issue changelog |
 | `read:sprint:jira-software` | Sprints and sprint metadata |
 | `read:board-scope:jira-software` | Board list |
+| `read:board-scope.admin:jira-software` | Board estimation configuration |
 | `read:project:jira` | Project context |
 | `read:issue-details:jira` | Sprint issue fields |
 | `read:jql:jira` | Sprint issue retrieval |
@@ -215,9 +260,16 @@ Implementation: `src/delivery-intelligence/score.js`
 - `staleCount`, `staleIssues`
 - `topAnomalies[]` (severity, explanation, evidence, suggested action, drill-down)
 - `previousSprint`, `previousSprintMetrics`, `metricDeltas`, `comparison`
+- `readiness`, `readinessFindings` (sprint goal never scored)
+- `sprintPace`, `deliveryPace` (transparent pacing — not a forecast)
+- `compoundRisks` (per-issue attention levels)
+- `coachingInterventions` (Evidence / Interpretation / Suggested intervention)
+- `historicalPatterns`, `retrospectiveQuestions`
+- `briefs` (`teamUpdate`, `leadershipBrief`, `retrospectiveSummary` with plain + markdown)
+- `estimation` (board field model + coverage capability)
 - `context` (project, board)
 - `sprint` (id, name, dates)
-- `capabilities` (`scopeChange`, `carryover`, `scopeRemovals`, `comparison`)
+- `capabilities` (scope/carryover/comparison plus readiness, pace, coaching, briefs, …)
 - `limitations`
 
 ---

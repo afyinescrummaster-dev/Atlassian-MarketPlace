@@ -1,12 +1,13 @@
 import api, { route } from "@forge/api";
-import { MAX_CHANGELOG_ISSUES, MAX_SPRINT_ISSUES } from "../delivery-intelligence/constants.js";
+import { MAX_CHANGELOG_ISSUES, MAX_SPRINT_ISSUES, CAPABILITY_STATUS } from "../delivery-intelligence/constants.js";
 import { failure, logDiag, logEvidence, STAGES } from "../delivery-intelligence/diagnostics.js";
 import {
   extractSprintChanges,
+  extractStatusChanges,
   normalizeIssue,
 } from "../delivery-intelligence/normalize.js";
 
-const SPRINT_ISSUE_FIELDS = [
+const BASE_SPRINT_ISSUE_FIELDS = [
   "summary",
   "status",
   "issuetype",
@@ -16,7 +17,9 @@ const SPRINT_ISSUE_FIELDS = [
   "updated",
   "labels",
   "issuelinks",
-].join(",");
+  "description",
+  "parent",
+];
 
 const CHANGELOG_CONCURRENCY = 5;
 
@@ -52,8 +55,21 @@ const emptyContext = (projectKey, limitations, board = null) => ({
   sprint: null,
   issues: [],
   changelogsByKey: {},
+  statusHistoriesByKey: {},
+  estimation: {
+    usable: false,
+    fieldId: null,
+    fieldName: null,
+    estimatedIssueCount: 0,
+    coverage: 0,
+    capability: {
+      status: CAPABILITY_STATUS.UNAVAILABLE,
+      reason: "No active sprint context was available.",
+    },
+  },
   previousSprint: null,
   previousSprintContext: null,
+  historicalSprintContexts: [],
   limitations,
 });
 
@@ -102,6 +118,112 @@ export const fetchBoardsForProject = async (projectKey) => {
       name: board.name,
       type: board.type,
     })),
+  };
+};
+
+export const fetchBoardEstimationField = async (boardId) => {
+  if (!boardId) {
+    return {
+      ok: false,
+      fieldId: null,
+      fieldName: null,
+      capability: {
+        status: CAPABILITY_STATUS.UNAVAILABLE,
+        reason: "Board id was not available for estimation configuration.",
+      },
+    };
+  }
+
+  try {
+    const response = await requestJira(
+      route`/rest/agile/1.0/board/${boardId}/configuration`,
+    );
+    if (!response.ok) {
+      return {
+        ok: false,
+        fieldId: null,
+        fieldName: null,
+        capability: {
+          status: CAPABILITY_STATUS.UNAVAILABLE,
+          reason: "Board estimation configuration could not be loaded.",
+        },
+      };
+    }
+    const payload = (await readJson(response)) ?? {};
+    const fieldId = payload?.estimation?.field?.fieldId || null;
+    const fieldName =
+      payload?.estimation?.field?.displayName ||
+      payload?.estimation?.field?.fieldName ||
+      null;
+    if (!fieldId) {
+      return {
+        ok: true,
+        fieldId: null,
+        fieldName: null,
+        capability: {
+          status: CAPABILITY_STATUS.UNAVAILABLE,
+          reason: "This board does not have an estimation field configured.",
+        },
+      };
+    }
+    return {
+      ok: true,
+      fieldId,
+      fieldName,
+      capability: {
+        status: CAPABILITY_STATUS.AVAILABLE,
+        reason: `Board estimation field ${fieldName || fieldId} is configured.`,
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      fieldId: null,
+      fieldName: null,
+      capability: {
+        status: CAPABILITY_STATUS.UNAVAILABLE,
+        reason: "Board estimation configuration could not be loaded.",
+      },
+    };
+  }
+};
+
+export const buildEstimationModel = ({ fieldId, fieldName, capability, issues = [] }) => {
+  if (!fieldId) {
+    return {
+      usable: false,
+      fieldId: null,
+      fieldName: fieldName || null,
+      estimatedIssueCount: 0,
+      coverage: 0,
+      capability: capability || {
+        status: CAPABILITY_STATUS.UNAVAILABLE,
+        reason: "Board estimation field is not configured.",
+      },
+    };
+  }
+
+  const estimatedIssueCount = (issues || []).filter(
+    (issue) => typeof issue?.estimate === "number" && Number.isFinite(issue.estimate),
+  ).length;
+  const coverage = issues.length ? estimatedIssueCount / issues.length : 0;
+  const usable = estimatedIssueCount > 0;
+  return {
+    usable,
+    fieldId,
+    fieldName: fieldName || null,
+    estimatedIssueCount,
+    coverage,
+    capability: {
+      status: usable
+        ? coverage >= 0.5
+          ? CAPABILITY_STATUS.AVAILABLE
+          : CAPABILITY_STATUS.PARTIAL
+        : CAPABILITY_STATUS.PARTIAL,
+      reason: usable
+        ? `Estimates present on ${estimatedIssueCount} of ${issues.length} sprint issues.`
+        : `Estimation field ${fieldName || fieldId} is configured, but no issue estimates were returned.`,
+    },
   };
 };
 
@@ -186,13 +308,22 @@ export const fetchSprintById = async (sprintId) => {
 };
 
 export const fetchPreviousClosedSprint = async (boardId, beforeIso) => {
+  const result = await fetchRecentlyClosedSprints(boardId, beforeIso, 1);
+  return {
+    ok: result.ok,
+    sprint: result.sprints?.[0] || null,
+    httpStatus: result.httpStatus,
+  };
+};
+
+export const fetchRecentlyClosedSprints = async (boardId, beforeIso, limit = 3) => {
   const beforeMs = beforeIso ? new Date(beforeIso).getTime() : Number.NaN;
-  if (!boardId || Number.isNaN(beforeMs)) {
-    return { ok: true, sprint: null };
+  if (!boardId || Number.isNaN(beforeMs) || limit <= 0) {
+    return { ok: true, sprints: [] };
   }
 
   let startAt = 0;
-  let best = null;
+  const candidates = [];
 
   for (;;) {
     const response = await requestJira(
@@ -203,7 +334,7 @@ export const fetchPreviousClosedSprint = async (boardId, beforeIso) => {
         boardId,
         httpStatus: response.status,
       });
-      return { ok: false, sprint: null, httpStatus: response.status };
+      return { ok: false, sprints: [], httpStatus: response.status };
     }
 
     const payload = (await readJson(response)) ?? {};
@@ -217,17 +348,16 @@ export const fetchPreviousClosedSprint = async (boardId, beforeIso) => {
       if (Number.isNaN(endedMs) || endedMs > beforeMs) {
         continue;
       }
-      if (!best || endedMs > best.endedMs) {
-        best = {
-          id: row.id,
-          name: row.name,
-          endedMs,
-          startDate: row.startDate || null,
-          completeDate: row.completeDate || null,
-          endDate: row.endDate || null,
-          activatedDate: row.activatedDate || null,
-        };
-      }
+      candidates.push({
+        id: row.id,
+        name: row.name,
+        endedMs,
+        startDate: row.startDate || null,
+        completeDate: row.completeDate || null,
+        endDate: row.endDate || null,
+        activatedDate: row.activatedDate || null,
+        goal: row.goal || null,
+      });
     }
 
     if (payload.isLast === true || values.length === 0) {
@@ -239,29 +369,40 @@ export const fetchPreviousClosedSprint = async (boardId, beforeIso) => {
     }
   }
 
-  const sprint = best
-    ? {
-        id: best.id,
-        name: best.name,
-        startDate: best.startDate,
-        completeDate: best.completeDate,
-        endDate: best.endDate,
-        activatedDate: best.activatedDate,
-      }
-    : null;
-  logEvidence("previous-sprint", { boardId, previousSprint: sprint });
-  return { ok: true, sprint };
+  candidates.sort((a, b) => b.endedMs - a.endedMs);
+  const sprints = candidates.slice(0, limit).map((best) => ({
+    id: best.id,
+    name: best.name,
+    startDate: best.startDate,
+    completeDate: best.completeDate,
+    endDate: best.endDate,
+    activatedDate: best.activatedDate,
+    goal: best.goal || null,
+  }));
+  logEvidence("previous-sprints", { boardId, count: sprints.length, sprints });
+  return { ok: true, sprints };
 };
 
-export const fetchSprintIssues = async (sprintId, projectKey = null, boardId = null) => {
+export const fetchSprintIssues = async (
+  sprintId,
+  projectKey = null,
+  boardId = null,
+  options = {},
+) => {
   const issues = [];
   let startAt = 0;
   const maxResults = 50;
   let truncated = false;
+  const estimateFieldId = options.estimateFieldId || null;
+  const fieldList = [...BASE_SPRINT_ISSUE_FIELDS];
+  if (estimateFieldId && !fieldList.includes(estimateFieldId)) {
+    fieldList.push(estimateFieldId);
+  }
+  const fieldsQuery = fieldList.join(",");
 
   while (issues.length < MAX_SPRINT_ISSUES) {
     const response = await requestJira(
-      route`/rest/agile/1.0/sprint/${sprintId}/issue?startAt=${startAt}&maxResults=${maxResults}&fields=${SPRINT_ISSUE_FIELDS}`,
+      route`/rest/agile/1.0/sprint/${sprintId}/issue?startAt=${startAt}&maxResults=${maxResults}&fields=${fieldsQuery}`,
     );
 
     if (permissionStatus(response.status)) {
@@ -291,7 +432,9 @@ export const fetchSprintIssues = async (sprintId, projectKey = null, boardId = n
 
     const payload = (await readJson(response)) ?? {};
     const pageIssues = Array.isArray(payload.issues) ? payload.issues : [];
-    issues.push(...pageIssues.map(normalizeIssue));
+    issues.push(
+      ...pageIssues.map((issue) => normalizeIssue(issue, { estimateFieldId })),
+    );
 
     if (payload.isLast === true || pageIssues.length === 0) {
       truncated = false;
@@ -305,11 +448,19 @@ export const fetchSprintIssues = async (sprintId, projectKey = null, boardId = n
     }
   }
 
+  const sprintKeys = new Set(issues.map((issue) => issue.key).filter(Boolean));
+  for (const issue of issues) {
+    for (const link of issue.dependencyLinks || []) {
+      link.relatedInSprint = sprintKeys.has(link.relatedKey);
+    }
+  }
+
   return { ok: true, issues, truncated, partial: false };
 };
 
 export const fetchIssueChangelog = async (issueKey) => {
-  const changes = [];
+  const sprintChanges = [];
+  const statusChanges = [];
   let startAt = 0;
   const maxResults = 100;
 
@@ -319,11 +470,16 @@ export const fetchIssueChangelog = async (issueKey) => {
     );
 
     if (!response.ok) {
-      return { ok: changes.length > 0, changes };
+      return {
+        ok: sprintChanges.length > 0 || statusChanges.length > 0,
+        changes: sprintChanges,
+        statusChanges,
+      };
     }
 
     const payload = (await readJson(response)) ?? {};
-    changes.push(...extractSprintChanges(payload));
+    sprintChanges.push(...extractSprintChanges(payload));
+    statusChanges.push(...extractStatusChanges(payload));
     const values = Array.isArray(payload.values) ? payload.values : [];
     if (payload.isLast === true || values.length === 0) {
       break;
@@ -334,7 +490,7 @@ export const fetchIssueChangelog = async (issueKey) => {
     }
   }
 
-  return { ok: true, changes };
+  return { ok: true, changes: sprintChanges, statusChanges };
 };
 
 const mapPool = async (items, concurrency, mapper) => {
@@ -355,12 +511,14 @@ const mapPool = async (items, concurrency, mapper) => {
 
 export const fetchChangelogsForIssues = async (issues, limit = MAX_CHANGELOG_ISSUES) => {
   const changelogsByKey = {};
+  const statusHistoriesByKey = {};
   const slice = issues.slice(0, limit);
   let fetched = 0;
 
   if (slice.length === 0) {
     return {
       changelogsByKey,
+      statusHistoriesByKey,
       fetched,
       requested: 0,
       capped: issues.length > limit,
@@ -374,15 +532,74 @@ export const fetchChangelogsForIssues = async (issues, limit = MAX_CHANGELOG_ISS
     const result = await fetchIssueChangelog(issue.key);
     if (result.ok) {
       changelogsByKey[issue.key] = result.changes;
+      statusHistoriesByKey[issue.key] = result.statusChanges || [];
       fetched += 1;
     }
   });
 
   return {
     changelogsByKey,
+    statusHistoriesByKey,
     fetched,
     requested: slice.length,
     capped: issues.length > limit,
+  };
+};
+
+const loadClosedSprintContext = async ({
+  boardId,
+  projectKey,
+  closedSprint,
+  estimateFieldId,
+  previousPreviousSprint = null,
+}) => {
+  let sprint = closedSprint;
+  try {
+    const detail = await fetchSprintById(closedSprint.id);
+    if (detail.ok && detail.sprint) {
+      sprint = { ...closedSprint, ...detail.sprint };
+    }
+  } catch {
+    // keep list metadata
+  }
+
+  const issuesResult = await fetchSprintIssues(sprint.id, projectKey, boardId, {
+    estimateFieldId,
+  });
+  if (!issuesResult.ok) {
+    return {
+      sprint,
+      issues: null,
+      changelogsByKey: {},
+      statusHistoriesByKey: {},
+      previousPreviousSprint,
+      partial: true,
+      reason: "Previous sprint issues could not be loaded.",
+    };
+  }
+
+  let changelogsByKey = {};
+  let statusHistoriesByKey = {};
+  let partial = Boolean(issuesResult.truncated || issuesResult.partial);
+  try {
+    const logs = await fetchChangelogsForIssues(issuesResult.issues);
+    changelogsByKey = logs.changelogsByKey;
+    statusHistoriesByKey = logs.statusHistoriesByKey;
+    if (logs.capped || logs.fetched < logs.requested) {
+      partial = true;
+    }
+  } catch {
+    partial = true;
+  }
+
+  return {
+    sprint,
+    issues: issuesResult.issues,
+    changelogsByKey,
+    statusHistoriesByKey,
+    previousPreviousSprint,
+    partial,
+    reason: null,
   };
 };
 
@@ -441,14 +658,24 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
     commitmentAt: sprint.activatedDate || sprint.startDate,
   });
 
+  const estimationConfig = await fetchBoardEstimationField(selectedBoard.id);
+
   const issuesResult = await fetchSprintIssues(
     sprint.id,
     projectKey,
     selectedBoard.id,
+    { estimateFieldId: estimationConfig.fieldId },
   );
   if (!issuesResult.ok) {
     return issuesResult;
   }
+
+  const estimation = buildEstimationModel({
+    fieldId: estimationConfig.fieldId,
+    fieldName: estimationConfig.fieldName,
+    capability: estimationConfig.capability,
+    issues: issuesResult.issues,
+  });
 
   logDiag("sprint-issues", {
     stage: STAGES.FETCH_SPRINT_ISSUES,
@@ -456,6 +683,7 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
     boardId: selectedBoard.id,
     sprintId: sprint.id,
     issueCount: issuesResult.issues.length,
+    estimationFieldId: estimation.fieldId,
   });
 
   let changelogResult;
@@ -476,25 +704,18 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
     });
     changelogResult = {
       changelogsByKey: {},
+      statusHistoriesByKey: {},
       fetched: 0,
       requested: Math.min(issuesResult.issues.length, MAX_CHANGELOG_ISSUES),
       capped: true,
     };
   }
 
-  let previousSprint;
+  let previousSprint = null;
   let previousSprintContext = null;
-  try {
-    const previousResult = await fetchPreviousClosedSprint(
-      selectedBoard.id,
-      sprint.activatedDate || sprint.startDate,
-    );
-    previousSprint = previousResult.ok ? previousResult.sprint : null;
-  } catch {
-    previousSprint = null;
-  }
-
+  let historicalSprintContexts = [];
   const limitations = [];
+
   if (issuesResult.truncated) {
     limitations.push(
       `Sprint issue list truncated at ${MAX_SPRINT_ISSUES} issues.`,
@@ -505,90 +726,73 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
       `Sprint changelog history fetched for ${changelogResult.fetched} of ${changelogResult.requested} sampled issues.`,
     );
   }
+  if (estimation.capability.status !== CAPABILITY_STATUS.AVAILABLE) {
+    limitations.push(estimation.capability.reason);
+  }
 
-  if (previousSprint?.id) {
-    try {
-      const previousDetail = await fetchSprintById(previousSprint.id);
-      if (previousDetail.ok && previousDetail.sprint) {
-        previousSprint = { ...previousSprint, ...previousDetail.sprint };
-      }
+  try {
+    const closedResult = await fetchRecentlyClosedSprints(
+      selectedBoard.id,
+      sprint.activatedDate || sprint.startDate,
+      3,
+    );
+    const closedSprints = closedResult.ok ? closedResult.sprints : [];
+    previousSprint = closedSprints[0] || null;
 
-      let previousPreviousSprint = null;
-      try {
-        const priorResult = await fetchPreviousClosedSprint(
-          selectedBoard.id,
-          previousSprint.activatedDate ||
-            previousSprint.startDate ||
-            previousSprint.completeDate,
-        );
-        previousPreviousSprint = priorResult.ok ? priorResult.sprint : null;
-      } catch {
-        previousPreviousSprint = null;
-      }
-
-      const previousIssuesResult = await fetchSprintIssues(
-        previousSprint.id,
-        projectKey,
-        selectedBoard.id,
-      );
-      if (!previousIssuesResult.ok) {
-        previousSprintContext = {
-          issues: null,
-          changelogsByKey: {},
-          previousPreviousSprint,
-          reason: "Previous sprint issues could not be loaded, so historical comparison is unavailable.",
-        };
-        limitations.push(previousSprintContext.reason);
-      } else {
-        let previousChangelogsByKey = {};
-        let previousPartial = Boolean(
-          previousIssuesResult.truncated || previousIssuesResult.partial,
-        );
-        if (previousPartial) {
+    if (closedSprints.length) {
+      const contexts = [];
+      for (let index = 0; index < closedSprints.length; index += 1) {
+        const closed = closedSprints[index];
+        const prior = closedSprints[index + 1] || null;
+        const loaded = await loadClosedSprintContext({
+          boardId: selectedBoard.id,
+          projectKey,
+          closedSprint: closed,
+          estimateFieldId: estimationConfig.fieldId,
+          previousPreviousSprint: prior,
+        });
+        contexts.push(loaded);
+        if (loaded.reason) {
+          limitations.push(`${closed.name}: ${loaded.reason}`);
+        } else if (loaded.partial) {
           limitations.push(
-            "Previous sprint issue list was truncated, so comparison may be incomplete.",
+            `${closed.name}: historical sprint data is partial.`,
           );
         }
-        try {
-          const previousLogs = await fetchChangelogsForIssues(previousIssuesResult.issues);
-          previousChangelogsByKey = previousLogs.changelogsByKey;
-          if (previousLogs.capped || previousLogs.fetched < previousLogs.requested) {
-            previousPartial = true;
-            limitations.push(
-              `Previous sprint changelog history fetched for ${previousLogs.fetched} of ${previousLogs.requested} sampled issues.`,
-            );
+      }
+      historicalSprintContexts = contexts;
+      previousSprintContext = contexts[0]
+        ? {
+            issues: contexts[0].issues,
+            changelogsByKey: contexts[0].changelogsByKey,
+            statusHistoriesByKey: contexts[0].statusHistoriesByKey,
+            previousPreviousSprint: contexts[0].previousPreviousSprint,
+            partial: contexts[0].partial,
+            reason: contexts[0].reason,
           }
-        } catch {
-          previousPartial = true;
-          limitations.push(
-            "Previous sprint changelog history was not available, so some comparison metrics are incomplete.",
-          );
-        }
+        : null;
 
+      if (previousSprintContext?.issues) {
         logDiag("previous-sprint-loaded", {
           stage: STAGES.FETCH_PREVIOUS_SPRINT,
           projectKey,
           boardId: selectedBoard.id,
-          sprintId: previousSprint.id,
-          issueCount: previousIssuesResult.issues.length,
+          sprintId: previousSprint?.id,
+          issueCount: previousSprintContext.issues.length,
+          historicalCount: historicalSprintContexts.length,
         });
-
-        previousSprintContext = {
-          issues: previousIssuesResult.issues,
-          changelogsByKey: previousChangelogsByKey,
-          previousPreviousSprint,
-          partial: previousPartial,
-        };
       }
-    } catch {
-      previousSprintContext = {
-        issues: null,
-        changelogsByKey: {},
-        previousPreviousSprint: null,
-        reason: "Previous sprint data could not be loaded, so historical comparison is unavailable.",
-      };
-      limitations.push(previousSprintContext.reason);
     }
+  } catch {
+    previousSprint = null;
+    previousSprintContext = {
+      issues: null,
+      changelogsByKey: {},
+      statusHistoriesByKey: {},
+      previousPreviousSprint: null,
+      reason: "Previous sprint data could not be loaded, so historical comparison is unavailable.",
+    };
+    limitations.push(previousSprintContext.reason);
   }
 
   return {
@@ -601,8 +805,11 @@ export const loadDeliveryContext = async ({ projectKey, boardId = null }) => {
     sprint,
     issues: issuesResult.issues,
     changelogsByKey: changelogResult.changelogsByKey,
+    statusHistoriesByKey: changelogResult.statusHistoriesByKey,
+    estimation,
     previousSprint,
     previousSprintContext,
+    historicalSprintContexts,
     limitations,
   };
 };

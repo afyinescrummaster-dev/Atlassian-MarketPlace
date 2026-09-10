@@ -300,6 +300,47 @@
   margin-top: 16px;
 }
 
+.pace-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pace-grid .n {
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.brief-preview {
+  margin: 12px 0;
+  padding: 12px;
+  background: #fafbfc;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.45;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.question-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-subtle);
+  font-size: 13px;
+}
+
+.question-list li {
+  margin-bottom: 6px;
+}
+
+.coaching .note strong,
+.coaching .sub strong {
+  color: var(--text);
+}
+
 .note {
   margin-top: 10px;
   font-size: 12px;
@@ -331,6 +372,7 @@
   .grid-2,
   .kpi-grid,
   .scope-grid,
+  .pace-grid,
   .split-lists,
   .compare-row {
     grid-template-columns: 1fr 1fr;
@@ -341,6 +383,7 @@
   .grid-2,
   .kpi-grid,
   .scope-grid,
+  .pace-grid,
   .split-lists,
   .compare-row,
   .issue-row {

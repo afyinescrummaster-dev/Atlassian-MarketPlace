@@ -1,4 +1,5 @@
 import { START_COMMITMENT_WINDOW_MS } from "./constants.js";
+import { isSprintMembershipChange } from "./normalize.js";
 
 const JUNK_TOKEN = /^(state|rapidviewid|completedate|startdate|enddate|sequence|goal|synced|autostartstop|originboardid)=/i;
 
@@ -118,9 +119,13 @@ export const classifyIssueSprintHistory = ({
   }
 
   const startMs = new Date(sprintStart).getTime();
-  const sorted = [...changes].sort(
-    (left, right) => new Date(left.at).getTime() - new Date(right.at).getTime(),
-  );
+  // Membership must ignore status (and other) changelog entries. Sprint-only
+  // arrays remain compatible: entries without field are treated as sprint.
+  const sorted = [...changes]
+    .filter(isSprintMembershipChange)
+    .sort(
+      (left, right) => new Date(left.at).getTime() - new Date(right.at).getTime(),
+    );
 
   if (sorted.length === 0) {
     return {

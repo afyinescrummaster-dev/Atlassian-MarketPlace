@@ -104,6 +104,7 @@ app:
   id: ari:cloud:ecosystem::app/f7a87d39-d904-408d-9415-72b1052a7026
 permissions:
   scopes:
+    - read:board-scope.admin:jira-software
     - read:board-scope:jira-software
     - read:project:jira
     - read:issue-details:jira
