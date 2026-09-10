@@ -1,19 +1,49 @@
 import { daysBetween, isBlockedIssue, isDone, isStaleIssue } from "./normalize.js";
 import { CAPABILITY_STATUS, STALE_DAYS } from "./constants.js";
+import { toIssueCard } from "./issue-card.js";
 import {
   classifyIssueSprintHistory,
   roundScopePercent,
 } from "./membership.js";
 
+const REMOVALS_UNAVAILABLE = {
+  status: CAPABILITY_STATUS.UNAVAILABLE,
+  reason: "Reliable removal history is not available yet.",
+};
+
+const emptyScopeLists = () => ({
+  originalCommittedIssueKeys: [],
+  originalCommittedIssues: [],
+  addedIssueKeys: [],
+  addedIssues: [],
+  removedIssueCount: null,
+  removedIssueKeys: [],
+  removals: REMOVALS_UNAVAILABLE,
+});
+
 export const computeCompletion = (issues) => {
-  if (!issues.length) {
-    return { completionPercent: 0, doneCount: 0, totalCount: 0 };
+  const rows = issues || [];
+  if (!rows.length) {
+    return {
+      completionPercent: 0,
+      doneCount: 0,
+      totalCount: 0,
+      doneIssues: [],
+      openIssues: [],
+    };
   }
-  const doneCount = issues.filter(isDone).length;
+  const doneIssues = rows.filter(isDone).map((issue) =>
+    toIssueCard(issue, { reason: "Done" }),
+  );
+  const openIssues = rows.filter((issue) => !isDone(issue)).map((issue) =>
+    toIssueCard(issue, { reason: "Open" }),
+  );
   return {
-    completionPercent: Math.round((doneCount / issues.length) * 100),
-    doneCount,
-    totalCount: issues.length,
+    completionPercent: Math.round((doneIssues.length / rows.length) * 100),
+    doneCount: doneIssues.length,
+    totalCount: rows.length,
+    doneIssues,
+    openIssues,
   };
 };
 
@@ -44,6 +74,7 @@ export const computeScopeChange = ({
   changelogsByKey,
 }) => {
   const currentIssueCount = (issues || []).length;
+  const lists = emptyScopeLists();
 
   if (!sprintStart) {
     return {
@@ -51,6 +82,7 @@ export const computeScopeChange = ({
       currentIssueCount,
       addedIssueCount: null,
       scopeChangePercent: null,
+      ...lists,
       capability: {
         status: CAPABILITY_STATUS.UNAVAILABLE,
         reason: "Sprint start date was not returned by Jira.",
@@ -67,9 +99,10 @@ export const computeScopeChange = ({
   });
   const known = classified.filter((row) => row.classification.status === "classified");
   const unknownCount = classified.length - known.length;
-  const addedIssueCount = known.filter((row) => row.classification.added).length;
+  const addedRows = known.filter((row) => row.classification.added);
   const committedKnown = known.filter((row) => row.classification.committed).length;
   const originalCommittedCount = committedKnown + unknownCount;
+  const addedIssueCount = addedRows.length;
 
   if (known.length === 0) {
     return {
@@ -77,6 +110,7 @@ export const computeScopeChange = ({
       currentIssueCount,
       addedIssueCount: null,
       scopeChangePercent: null,
+      ...lists,
       capability: {
         status: CAPABILITY_STATUS.UNAVAILABLE,
         reason:
@@ -85,11 +119,40 @@ export const computeScopeChange = ({
     };
   }
 
+  const originalCommittedIssues = classified
+    .filter((row) =>
+      row.classification.status !== "classified"
+        ? true
+        : row.classification.committed,
+    )
+    .map((row) =>
+      toIssueCard(row.issue, {
+        reason:
+          row.classification.status !== "classified"
+            ? "Counted as original commitment (no sprint changelog)"
+            : "Original commitment",
+        joinedAt: row.classification.firstJoinedAt || null,
+      }),
+    );
+  const addedIssues = addedRows.map((row) =>
+    toIssueCard(row.issue, {
+      reason: "Added after sprint start",
+      joinedAt: row.classification.firstJoinedAt || null,
+    }),
+  );
+
   return {
     originalCommittedCount,
     currentIssueCount,
     addedIssueCount,
     scopeChangePercent: roundScopePercent(addedIssueCount, originalCommittedCount),
+    originalCommittedIssueKeys: originalCommittedIssues.map((row) => row.key),
+    originalCommittedIssues,
+    addedIssueKeys: addedIssues.map((row) => row.key),
+    addedIssues,
+    removedIssueCount: null,
+    removedIssueKeys: [],
+    removals: REMOVALS_UNAVAILABLE,
     capability: {
       status:
         unknownCount > 0 ? CAPABILITY_STATUS.PARTIAL : CAPABILITY_STATUS.AVAILABLE,
@@ -114,6 +177,7 @@ export const computeCarryover = ({
     return {
       carryoverCount: null,
       carryoverIssueKeys: [],
+      carryoverIssues: [],
       capability: {
         status: CAPABILITY_STATUS.UNAVAILABLE,
         reason: "Sprint metadata required for carryover detection was missing.",
@@ -135,6 +199,7 @@ export const computeCarryover = ({
     return {
       carryoverCount: null,
       carryoverIssueKeys: [],
+      carryoverIssues: [],
       capability: {
         status: CAPABILITY_STATUS.UNAVAILABLE,
         reason:
@@ -143,18 +208,24 @@ export const computeCarryover = ({
     };
   }
 
-  const carryoverIssueKeys = classified
+  const carryoverIssues = classified
     .filter(
       (row) =>
         row.classification.carryover &&
         !isDone(row.issue) &&
         row.classification.priorSprints.length > 0,
     )
-    .map((row) => row.issue.key);
+    .map((row) =>
+      toIssueCard(row.issue, {
+        reason: "Carried from the previous completed sprint",
+        joinedAt: row.classification.firstJoinedAt || null,
+      }),
+    );
 
   return {
-    carryoverCount: carryoverIssueKeys.length,
-    carryoverIssueKeys,
+    carryoverCount: carryoverIssues.length,
+    carryoverIssueKeys: carryoverIssues.map((row) => row.key),
+    carryoverIssues,
     capability: {
       status:
         known.length < classified.length
@@ -167,27 +238,28 @@ export const computeCarryover = ({
 };
 
 export const computeBlocked = (issues, now) => {
-  const blocked = issues.filter((issue) => isBlockedIssue(issue));
+  const blocked = (issues || []).filter((issue) => isBlockedIssue(issue));
   return {
     blockedCount: blocked.length,
     blockedIssues: blocked.map((issue) => ({
-      key: issue.key,
-      summary: issue.summary,
-      statusName: issue.statusName,
-      ageDays: daysBetween(issue.updated, now),
-      blockedLinksCount: issue.blockedLinksCount,
+      ...toIssueCard(issue, {
+        reason: "Blocked",
+        ageDays: daysBetween(issue.updated, now),
+      }),
+      blockedLinksCount: issue.blockedLinksCount || 0,
     })),
   };
 };
 
 export const computeStale = (issues, now, staleDays = STALE_DAYS) => {
-  const stale = issues.filter((issue) => isStaleIssue(issue, now, staleDays));
+  const stale = (issues || []).filter((issue) => isStaleIssue(issue, now, staleDays));
   return {
     staleCount: stale.length,
-    staleIssues: stale.map((issue) => ({
-      key: issue.key,
-      summary: issue.summary,
-      ageDays: daysBetween(issue.updated, now),
-    })),
+    staleIssues: stale.map((issue) =>
+      toIssueCard(issue, {
+        reason: "Stale",
+        ageDays: daysBetween(issue.updated, now),
+      }),
+    ),
   };
 };

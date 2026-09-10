@@ -113,6 +113,7 @@ export const classifyIssueSprintHistory = ({
       added: false,
       carryover: false,
       priorSprints: [],
+      firstJoinedAt: null,
     };
   }
 
@@ -128,6 +129,7 @@ export const classifyIssueSprintHistory = ({
       added: false,
       carryover: false,
       priorSprints: [],
+      firstJoinedAt: null,
     };
   }
 
@@ -179,12 +181,18 @@ export const classifyIssueSprintHistory = ({
     (committed || added) &&
     tokensIncludeSprint(priorIdentities, previousSprint);
 
+  const firstJoinedAt =
+    firstJoinedCurrentAt == null || firstJoinedCurrentAt === Number.NEGATIVE_INFINITY
+      ? null
+      : new Date(firstJoinedCurrentAt).toISOString();
+
   return {
     status: "classified",
     committed,
     added,
     carryover,
     priorSprints: priorIdentities,
+    firstJoinedAt,
   };
 };
 

@@ -11,6 +11,16 @@ const readProjectKey = (payload) => {
   return typeof direct === "string" ? direct.toUpperCase() : null;
 };
 
+const compactAnomaly = (item) => ({
+  id: item.id,
+  severity: item.severity,
+  title: item.title,
+  explanation: item.explanation || item.summary || "",
+  affectedIssueCount: item.affectedIssueCount ?? null,
+  issueKey: item.issueKey || null,
+  suggestedAction: item.suggestedAction || null,
+});
+
 const compactSnapshot = (snapshot) => {
   if (!snapshot) {
     return null;
@@ -33,10 +43,24 @@ const compactSnapshot = (snapshot) => {
     originalCommittedCount: snapshot.originalCommittedCount,
     currentIssueCount: snapshot.currentIssueCount,
     addedIssueCount: snapshot.addedIssueCount,
+    originalCommittedIssueKeys: (snapshot.originalCommittedIssueKeys || []).slice(0, 20),
+    addedIssueKeys: (snapshot.addedIssueKeys || []).slice(0, 20),
     carryoverCount: snapshot.carryoverCount,
+    carryoverIssueKeys: (snapshot.carryoverIssueKeys || []).slice(0, 20),
     blockedCount: snapshot.blockedCount,
+    blockedIssueKeys: (snapshot.blockedIssues || []).slice(0, 10).map((row) => row.key),
     staleCount: snapshot.staleCount,
-    topAnomalies: (snapshot.topAnomalies || []).slice(0, 5),
+    staleIssueKeys: (snapshot.staleIssues || []).slice(0, 10).map((row) => row.key),
+    topAnomalies: (snapshot.topAnomalies || []).slice(0, 5).map(compactAnomaly),
+    previousSprint: snapshot.previousSprint,
+    previousSprintMetrics: snapshot.previousSprintMetrics,
+    metricDeltas: snapshot.metricDeltas,
+    comparison: snapshot.comparison
+      ? {
+          capability: snapshot.comparison.capability,
+          previousSprint: snapshot.comparison.previousSprint,
+        }
+      : null,
     capabilities: snapshot.capabilities,
     limitations: snapshot.limitations,
   };
@@ -126,6 +150,8 @@ export const getScopeChanges = async (payload) => {
     currentIssueCount: scope.currentIssueCount,
     addedIssueCount: scope.addedIssueCount,
     scopeChangePercent: scope.scopeChangePercent,
+    originalCommittedIssueKeys: (scope.originalCommittedIssueKeys || []).slice(0, 20),
+    addedIssueKeys: (scope.addedIssueKeys || []).slice(0, 20),
     capability: scope.capability,
   };
 };

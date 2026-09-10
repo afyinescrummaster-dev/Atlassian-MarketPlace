@@ -7,6 +7,37 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-08-29 — [Delivery Intelligence] Sprint intelligence increment (features 1–5)
+
+### Goal
+Deepen V1 sprint intelligence: Scope Movement, actionable attention,
+drill-downs, current vs previous sprint, distinct Rovo intents.
+
+### Done
+- Branch: `feature/sprint-intelligence-core` from `main` / V1
+- Deterministic snapshot now includes issue lists, attention actions,
+  and previous-sprint comparison with capability states
+- Dashboard UI Build `2.9.0`: Overview, Scope Movement, attention,
+  trends, AI actions
+- Tests: 31 passing. No official release tag. Not merged to `main`.
+- Forge development **2.16.0** from `1523b75`.
+  Revision: `deploy/di/development/2.16.0`.
+  Rollback: `./scripts/rollback-deployment.sh di development 2.16.0`
+- Waiting for live Jira acceptance. Do not merge to `main`.
+- Follow-up: drill-downs now open the Jira issue or the matching
+  JQL issue list. Forge development **2.17.0** from `c154954`.
+- Follow-up: metric clicks stay on the report; Jira opens only from an
+  issue key or Show in Jira. Forge development **2.18.0** from `4bb252d`.
+
+### Out of scope (kept out)
+- Dependency intelligence
+- Automation / write scopes
+- Admin Health
+- Health-score formula redesign
+- Invented removal/de-scope history
+
+---
+
 ## 2026-08-29 — [Delivery Intelligence] V1 milestone `di-v1.0.0`
 
 ### Goal

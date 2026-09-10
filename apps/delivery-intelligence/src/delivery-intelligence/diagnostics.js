@@ -4,6 +4,7 @@ export const STAGES = {
   FETCH_ACTIVE_SPRINT: "fetch-active-sprint",
   FETCH_SPRINT_ISSUES: "fetch-sprint-issues",
   FETCH_CHANGELOG: "fetch-changelog",
+  FETCH_PREVIOUS_SPRINT: "fetch-previous-sprint",
   BUILD_SNAPSHOT: "build-health-snapshot",
 };
 
