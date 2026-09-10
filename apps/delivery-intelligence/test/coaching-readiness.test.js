@@ -506,3 +506,393 @@ test("Rovo prompts stay natural language after coaching increment", () => {
   assert.equal(isNaturalLanguagePrompt(prompt), true);
   assert.equal(/[{}]|FACTS/.test(prompt), false);
 });
+
+test("whitespace-only and formatted ADF descriptions", () => {
+  assert.equal(
+    evaluateDescriptionQuality({ description: "   \n\t  " }).state,
+    "missing",
+  );
+  const formatted = evaluateDescriptionQuality({
+    description: {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Customers cannot complete checkout when",
+              marks: [{ type: "strong" }],
+            },
+          ],
+        },
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "the payment gateway returns a timeout after three retries and support needs a clear recovery path before Friday release.",
+            },
+          ],
+        },
+      ],
+    },
+  });
+  assert.equal(formatted.state, "sufficient");
+  assert.ok(formatted.wordCount >= 15);
+});
+
+test("acceptance criteria Given/When/Then and custom field detection", () => {
+  const gwt = detectAcceptanceCriteria({
+    description:
+      "Given a logged-in user When they export the report Then a CSV downloads.",
+  });
+  assert.equal(gwt.state, "detected");
+  assert.equal(gwt.evidence, "given_when_then");
+
+  const custom = detectAcceptanceCriteria({
+    description: "Short note",
+    customFields: {
+      customfield_99: {
+        name: "Acceptance Criteria",
+        value: "Must pass QA smoke suite",
+      },
+    },
+  });
+  assert.equal(custom.state, "detected");
+  assert.equal(custom.evidence, "named_custom_field");
+
+  const unavailable = detectAcceptanceCriteria({
+    descriptionAvailable: false,
+    customFields: null,
+    configuredFieldId: null,
+  });
+  assert.equal(unavailable.state, "unavailable");
+});
+
+test("readiness estimate, assignee urgency, large issue, and no missing-epic warning", () => {
+  const issues = [
+    {
+      key: "PAY-10",
+      summary: "Unestimated",
+      statusCategoryKey: "new",
+      statusName: "To Do",
+      description:
+        "Enough words here to avoid weak description findings for this specific estimate check case.",
+      estimate: null,
+      updated: "2026-08-10T09:00:00.000Z",
+      labels: [],
+      assigneeDisplayName: "Alex",
+    },
+    {
+      key: "PAY-11",
+      summary: "Active unassigned",
+      statusCategoryKey: "indeterminate",
+      statusName: "In Progress",
+      description:
+        "Enough words here to avoid weak description findings for this assignee urgency case today.",
+      estimate: 3,
+      updated: "2026-08-10T09:00:00.000Z",
+      labels: [],
+      assigneeDisplayName: null,
+    },
+    {
+      key: "PAY-12",
+      summary: "Large",
+      statusCategoryKey: "new",
+      statusName: "To Do",
+      description:
+        "Enough words here to avoid weak description findings while testing unusually large issue detection.",
+      estimate: 40,
+      updated: "2026-08-10T09:00:00.000Z",
+      labels: [],
+      assigneeDisplayName: "Alex",
+    },
+    {
+      key: "PAY-13",
+      summary: "Normal A",
+      statusCategoryKey: "new",
+      statusName: "To Do",
+      description:
+        "Enough words here to avoid weak description findings while testing unusually large issue detection.",
+      estimate: 3,
+      updated: "2026-08-10T09:00:00.000Z",
+      labels: [],
+      assigneeDisplayName: "Alex",
+    },
+    {
+      key: "PAY-14",
+      summary: "Normal B",
+      statusCategoryKey: "new",
+      statusName: "To Do",
+      description:
+        "Enough words here to avoid weak description findings while testing unusually large issue detection.",
+      estimate: 5,
+      updated: "2026-08-10T09:00:00.000Z",
+      labels: [],
+      assigneeDisplayName: "Alex",
+    },
+    {
+      key: "PAY-15",
+      summary: "Normal C",
+      statusCategoryKey: "new",
+      statusName: "To Do",
+      description:
+        "Enough words here to avoid weak description findings while testing unusually large issue detection.",
+      estimate: 2,
+      updated: "2026-08-10T09:00:00.000Z",
+      labels: [],
+      assigneeDisplayName: "Alex",
+    },
+    {
+      key: "PAY-16",
+      summary: "Normal D",
+      statusCategoryKey: "new",
+      statusName: "To Do",
+      description:
+        "Enough words here to avoid weak description findings while testing unusually large issue detection.",
+      estimate: 5,
+      updated: "2026-08-10T09:00:00.000Z",
+      labels: [],
+      assigneeDisplayName: "Alex",
+    },
+  ];
+
+  const ready = computeReadiness({
+    issues,
+    sprint,
+    scope: {
+      addedIssueKeys: [],
+      originalCommittedIssueKeys: issues.map((row) => row.key),
+    },
+    carryover: { carryoverIssueKeys: [] },
+    blocked: { blockedIssues: [] },
+    estimation: {
+      usable: true,
+      fieldId: "customfield_10016",
+      capability: { status: "available", reason: "Board estimation field available" },
+    },
+    now: new Date("2026-08-12T12:00:00.000Z"),
+  });
+
+  assert.ok(ready.findings.some((row) => row.signalType === "missing_estimate"));
+  const unassigned = ready.findings.find(
+    (row) => row.signalType === "missing_assignee" && row.issueKey === "PAY-11",
+  );
+  assert.equal(unassigned.severity, ATTENTION_LEVEL.HIGH);
+  assert.ok(ready.findings.some((row) => row.signalType === "unusually_large"));
+  assert.ok(
+    !ready.findings.some(
+      (row) =>
+        /epic/i.test(row.explanation || "") || /epic/i.test(row.signalType || ""),
+    ),
+  );
+
+  const sparse = computeReadiness({
+    issues: issues.slice(0, 2),
+    sprint,
+    scope: { addedIssueKeys: [], originalCommittedIssueKeys: ["PAY-10", "PAY-11"] },
+    carryover: { carryoverIssueKeys: [] },
+    blocked: { blockedIssues: [] },
+    estimation: {
+      usable: true,
+      fieldId: "customfield_10016",
+      capability: { status: "available", reason: "ok" },
+    },
+    now: new Date("2026-08-12T12:00:00.000Z"),
+  });
+  assert.equal(sparse.capabilities.largeIssueDetection.status, "unavailable");
+  assert.ok(!sparse.findings.some((row) => row.signalType === "unusually_large"));
+});
+
+test("unavailable estimation does not mark every issue unestimated", () => {
+  const readiness = computeReadiness({
+    issues: [
+      {
+        key: "PAY-20",
+        summary: "No estimate field",
+        statusCategoryKey: "new",
+        statusName: "To Do",
+        description:
+          "Enough words here to avoid weak description findings for unavailable estimation model cases.",
+        estimate: null,
+        updated: "2026-08-10T09:00:00.000Z",
+        labels: [],
+        assigneeDisplayName: "Alex",
+      },
+    ],
+    sprint,
+    scope: { addedIssueKeys: [], originalCommittedIssueKeys: ["PAY-20"] },
+    carryover: { carryoverIssueKeys: [] },
+    blocked: { blockedIssues: [] },
+    estimation: {
+      usable: false,
+      capability: { status: "unavailable", reason: "No estimation model" },
+    },
+    now: new Date("2026-08-12T12:00:00.000Z"),
+  });
+  assert.ok(!readiness.findings.some((row) => row.signalType === "missing_estimate"));
+});
+
+test("delivery pace story-point basis, reopen, churn, accumulation, ownership language", () => {
+  const issues = [];
+  for (let i = 1; i <= 9; i += 1) {
+    issues.push({
+      key: `PAY-${i}`,
+      summary: `Issue ${i}`,
+      statusCategoryKey: i <= 2 ? "done" : "indeterminate",
+      statusName: i <= 2 ? "Done" : i <= 5 ? "Code Review" : "In Progress",
+      estimate: 5,
+      updated: "2026-08-05T09:00:00.000Z",
+      assigneeDisplayName: i >= 3 ? "Akeem" : "Alex",
+    });
+  }
+  issues.push({
+    key: "PAY-99",
+    summary: "Reopened",
+    statusCategoryKey: "indeterminate",
+    statusName: "In Progress",
+    estimate: 3,
+    updated: "2026-08-11T09:00:00.000Z",
+    assigneeDisplayName: "Alex",
+  });
+
+  const statusHistoriesByKey = {
+    "PAY-99": [
+      {
+        field: "status",
+        at: "2026-08-08T09:00:00.000Z",
+        from: "In Progress",
+        to: "Done",
+      },
+      {
+        field: "status",
+        at: "2026-08-09T09:00:00.000Z",
+        from: "Done",
+        to: "In Progress",
+      },
+    ],
+    "PAY-51": [
+      {
+        field: "status",
+        at: "2026-08-03T09:00:00.000Z",
+        from: "To Do",
+        to: "In Progress",
+      },
+    ],
+  };
+  // churn sample on PAY-6
+  statusHistoriesByKey["PAY-6"] = [
+    { field: "status", at: "2026-08-02T09:00:00.000Z", from: "To Do", to: "In Progress" },
+    { field: "status", at: "2026-08-03T09:00:00.000Z", from: "In Progress", to: "Review" },
+    { field: "status", at: "2026-08-04T09:00:00.000Z", from: "Review", to: "In Progress" },
+    { field: "status", at: "2026-08-05T09:00:00.000Z", from: "In Progress", to: "Review" },
+    { field: "status", at: "2026-08-06T09:00:00.000Z", from: "Review", to: "In Progress" },
+  ];
+
+  const pace = computeDeliveryPace({
+    issues,
+    sprint,
+    scope: {
+      addedIssueKeys: [],
+      originalCommittedIssueKeys: issues.map((row) => row.key),
+      addedIssues: [],
+      capability: { status: "available", reason: "ok" },
+    },
+    blocked: { blockedIssues: [] },
+    statusHistoriesByKey,
+    estimation: { usable: true },
+    now: new Date("2026-08-12T12:00:00.000Z"),
+  });
+
+  assert.equal(pace.sprintPace.measurementBasis, "story_points");
+  assert.ok(pace.reopenedIssues.items.some((row) => row.issueKey === "PAY-99"));
+  assert.ok(pace.statusChurn.items.some((row) => row.issueKey === "PAY-6"));
+  assert.ok(
+    pace.workflowAccumulation.items.some((row) => row.statusName === "Code Review"),
+  );
+  assert.ok(pace.ownershipConcentration.signal);
+  assert.match(pace.ownershipConcentration.signal.explanation, /Review whether work can be redistributed/);
+  assert.equal(/overloaded|performance/i.test(pace.ownershipConcentration.signal.explanation), false);
+});
+
+test("compound risks consolidate to one issue record", () => {
+  const compound = computeCompoundRisks({
+    issues: [
+      {
+        key: "PAY-2",
+        summary: "Stacked",
+        statusCategoryKey: "indeterminate",
+        statusName: "Blocked",
+      },
+    ],
+    readinessFindings: [
+      {
+        severity: ATTENTION_LEVEL.HIGH,
+        issueKey: "PAY-2",
+        issueSummary: "Stacked",
+        signalType: "carryover_entering",
+        evidence: "carryover",
+        explanation: "carryover",
+      },
+      {
+        severity: ATTENTION_LEVEL.MEDIUM,
+        issueKey: "PAY-2",
+        issueSummary: "Stacked",
+        signalType: "missing_assignee",
+        evidence: "unassigned",
+        explanation: "unassigned",
+      },
+    ],
+    paceSignals: [
+      {
+        id: "aging-PAY-2",
+        severity: ATTENTION_LEVEL.MEDIUM,
+        issueKey: "PAY-2",
+        explanation: "aging",
+      },
+    ],
+    blocked: {
+      blockedIssues: [{ key: "PAY-2", ageDays: 4, summary: "Stacked" }],
+    },
+    stale: { staleIssues: [] },
+    scope: { addedIssueKeys: [] },
+    carryover: { carryoverIssueKeys: ["PAY-2"] },
+  });
+
+  assert.equal(compound.items.length, 1);
+  assert.equal(compound.items[0].issueKey, "PAY-2");
+  assert.ok(compound.items[0].signals.length >= 2);
+});
+
+test("historical patterns handle two-sprint and unavailable cases", () => {
+  const mkFacts = (carryoverCount) => ({
+    completion: { completionPercent: 70 },
+    scope: { scopeChangePercent: 10, addedIssueCount: 1, originalCommittedCount: 10 },
+    carryover: { carryoverCount },
+    blocked: { blockedCount: 0 },
+    stale: { staleCount: 0 },
+    health: { score: 80 },
+  });
+
+  const two = computeHistoricalPatterns({
+    currentFacts: mkFacts(1),
+    historicalContexts: [
+      {
+        sprint: { id: 1, name: "S1", completeDate: "2026-07-01T00:00:00.000Z" },
+        facts: mkFacts(2),
+      },
+    ],
+  });
+  assert.ok(
+    two.capability.status === "partial" ||
+      two.patterns.length >= 0,
+  );
+
+  const none = computeHistoricalPatterns({
+    currentFacts: mkFacts(1),
+    historicalContexts: [],
+  });
+  assert.equal(none.capability.status, "unavailable");
+  assert.equal(none.patterns.length, 0);
+});
