@@ -6,9 +6,10 @@ Version: **1.1.0+** — Sprint Coaching / Readiness (working increment on
 Forge app location: `apps/delivery-intelligence/`  
 Status: **`di-v1.1.0`** remains the latest official milestone on `main`
 (Sprint Intelligence). This branch evolves DI into an evidence-based
-Agile coaching assistant. Live Forge development was **2.18.0** before
-this increment. V1 baseline `di-v1.0.0` @ `c780ff5` remains. Historical
-recovered known-good remains `di-v0.1.1` @ `4f44eb3` — do not delete.
+Agile coaching assistant. Live Forge development **3.0.0**
+(`deploy/di/development/3.0.0`, UI Build `2.10.0`). V1 baseline
+`di-v1.0.0` @ `c780ff5` remains. Historical recovered known-good remains
+`di-v0.1.1` @ `4f44eb3` — do not delete.
 See `docs/RECOVERY-2.8.0.md`. Working rules: `AGENTS.md`. Deploy log:
 `docs/DEPLOYMENT-HISTORY.md`.
 
