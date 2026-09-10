@@ -1,17 +1,14 @@
 # Delivery Intelligence for Jira
 
 Working product name: **Delivery Intelligence for Jira**  
-Version: **1.0.0** — Sprint Health + Rovo Intelligence  
+Version: **1.1.0** — Sprint Intelligence  
 Forge app location: `apps/delivery-intelligence/`  
-Status: **V1 milestone `di-v1.0.0`** @ `c780ff5`. Next increment
-(features 1–5: Scope Movement, attention items, drill-downs, current vs
-previous sprint, distinct Rovo intents) is on
-`feature/sprint-intelligence-core`. Do not merge until live Jira
-acceptance. Live development deploy for this increment: **2.16.0**
-from `1523b75` (`deploy/di/development/2.16.0`). Historical recovered
-known-good remains `di-v0.1.1` @
-`4f44eb3` — do not delete. See `docs/RECOVERY-2.8.0.md`. Working rules:
-`AGENTS.md`. Deploy log: `docs/DEPLOYMENT-HISTORY.md`.
+Status: **`di-v1.1.0`** — Sprint Intelligence, merged to `main`. Live
+Forge development **2.18.0** (`deploy/di/development/2.18.0`, UI Build
+`2.9.2`). V1 baseline `di-v1.0.0` @ `c780ff5` remains. Historical
+recovered known-good remains `di-v0.1.1` @ `4f44eb3` — do not delete.
+See `docs/RECOVERY-2.8.0.md`. Working rules: `AGENTS.md`. Deploy log:
+`docs/DEPLOYMENT-HISTORY.md`.
 
 Forge app ID:
 
@@ -30,6 +27,20 @@ Leaders want concise risk explanations without manual spreadsheet work.
 This product answers: **What needs attention in the current sprint, and why?**
 
 ---
+
+## `di-v1.1.0` — Sprint Intelligence
+
+Official tag: **`di-v1.1.0`**. Adds explorable sprint intelligence on
+the V1 baseline:
+
+- Scope Movement (original / added / current / growth)
+- Actionable deterministic attention items
+- In-report issue drill-downs (Jira opens from a key or Show in Jira)
+- Current vs previous completed sprint
+- Distinct natural-language Rovo intents
+
+Removals/de-scope remain unavailable. Health-score formula unchanged.
+No write scopes, dependency intelligence, or Admin Health changes.
 
 ## V1 milestone — Sprint Health + Rovo Intelligence
 

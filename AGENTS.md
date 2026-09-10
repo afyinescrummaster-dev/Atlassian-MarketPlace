@@ -11,11 +11,11 @@
 > release tags (`di-v1.0.0`) are known-good milestones. Deployment tags
 > (`deploy/di/development/2.15.0`) are ordinary CMS revision history.
 
-**Delivery Intelligence V1 — Sprint Health + Rovo Intelligence** is
-`di-v1.0.0` @ `c780ff5`. Compare future major work against that tag.
-`di-v0.1.1` @ `4f44eb3` remains the historical recovered known-good
-build. Do not delete or rewrite it. Story: `docs/DEPLOYMENT-MODEL.md`
-and `docs/RECOVERY-2.8.0.md`.
+**Delivery Intelligence** current official tag is `di-v1.1.0` — Sprint
+Intelligence. V1 baseline `di-v1.0.0` @ `c780ff5` remains. Compare
+later major work against `di-v1.1.0`. `di-v0.1.1` @ `4f44eb3` remains
+the historical recovered known-good build. Do not delete or rewrite it.
+Story: `docs/DEPLOYMENT-MODEL.md` and `docs/RECOVERY-2.8.0.md`.
 
 Before starting work, read these in order:
 
@@ -33,12 +33,13 @@ GitHub plus these files are the durable memory. Fetch and inspect remote
 state before changing or deploying. Do not invent release tags; the user
 names them.
 
-## Status (2026-08-29) — V1 milestone `di-v1.0.0`
+## Status (2026-09-10) — `di-v1.1.0` Sprint Intelligence
 
-**Current product milestone:** `di-v1.0.0` — Sprint Health + Rovo
-Intelligence → Git `c780ff5462fb9c74fa8cbba37f5a104d5401a524`
-(merge of recovered source + CMS deploy/rollback). Live Forge
-development **2.15.0**.
+**Current product milestone:** `di-v1.1.0` — Sprint Intelligence
+(Scope Movement, attention items, drill-downs, current vs previous
+sprint, distinct Rovo intents). Live Forge development **2.18.0**
+(`deploy/di/development/2.18.0`). V1 baseline `di-v1.0.0` @ `c780ff5`
+remains the prior official milestone.
 
 **Historical recovered known-good:** `di-v0.1.1` → `4f44eb3` → Forge
 **2.13.0** → PLAT accepted. Keep this tag.

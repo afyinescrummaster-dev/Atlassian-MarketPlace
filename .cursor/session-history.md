@@ -7,6 +7,19 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-09-10 — [Delivery Intelligence] `di-v1.1.0` on `main`
+
+### Goal
+Merge the accepted sprint intelligence increment and tag the next
+official `di-v*` milestone.
+
+### Done
+- Merged `feature/sprint-intelligence-core` into `main` (`a25cd5b`)
+- Tagged `di-v1.1.0`. Did not rewrite `di-v1.0.0` or `di-v0.1.1`.
+- Live Forge development remains **2.18.0** (`4bb252d`). No new deploy.
+
+---
+
 ## 2026-08-29 — [Delivery Intelligence] Sprint intelligence increment (features 1–5)
 
 ### Goal

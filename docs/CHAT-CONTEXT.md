@@ -3,7 +3,7 @@
 This file is the handoff for Cursor mobile or a remote agent. Read it before
 changing the Forge app. Do not invent missing Jira fields or sample metrics.
 
-Last updated: 2026-08-29 (sprint intelligence increment on `feature/sprint-intelligence-core`)
+Last updated: 2026-09-10 (`di-v1.1.0` Sprint Intelligence on `main`)
 
 ## What this repo is
 
@@ -18,13 +18,13 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
   `ari:cloud:ecosystem::app/c3817645-72ab-47cf-8c1c-a1dff1b69cff`
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
-- Delivery Intelligence **V1** (`di-v1.0.0` @ `c780ff5`): Sprint
-  Health + Rovo Intelligence. Next increment (features 1–5) is on
-  `feature/sprint-intelligence-core` — do not merge until live Jira
-  acceptance. Historical recovered known-good `di-v0.1.1` @ `4f44eb3`
-  is kept. See `docs/RECOVERY-2.8.0.md` and `docs/DEPLOYMENT-MODEL.md`.
-  Deploy: `./scripts/forge-deploy.sh`. Rollback:
-  `./scripts/rollback-deployment.sh`. History: `docs/deployments.jsonl`.
+- Delivery Intelligence **`di-v1.1.0`** — Sprint Intelligence, on
+  `main`. Live Forge development **2.18.0**. V1 baseline `di-v1.0.0` @
+  `c780ff5` remains. Historical recovered known-good `di-v0.1.1` @
+  `4f44eb3` is kept. See `docs/RECOVERY-2.8.0.md` and
+  `docs/DEPLOYMENT-MODEL.md`. Deploy: `./scripts/forge-deploy.sh`.
+  Rollback: `./scripts/rollback-deployment.sh`. History:
+  `docs/deployments.jsonl`.
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -251,11 +251,18 @@ actionable attention items, metric drill-downs, current vs previous
 completed sprint, and distinct natural-language Rovo intents. No
 dependency intelligence, automation, write scopes, or Admin Health
 changes. Health-score formula unchanged. Removals/de-scope left
-unavailable. Do not merge to `main` until the user accepts the live
-Jira dashboard. No official `di-v*` tag for this increment.
-Forge development **2.16.0** from `1523b75`
-(`deploy/di/development/2.16.0`). Rollback:
-`./scripts/rollback-deployment.sh di development 2.16.0`.
+unavailable. Merged to `main` on 2026-09-10 and tagged **`di-v1.1.0`**.
+Live Forge development **2.18.0** from `4bb252d`
+(`deploy/di/development/2.18.0`). Rollback:
+`./scripts/rollback-deployment.sh di development 2.18.0`.
+
+### 2026-09-10 — `di-v1.1.0` merged to `main`
+
+User accepted the sprint intelligence increment and authorized the
+official tag using the existing `di-v*` scheme. Merged
+`feature/sprint-intelligence-core` into `main` (`a25cd5b`) and tagged
+**`di-v1.1.0`**. Did not rewrite `di-v1.0.0` or `di-v0.1.1`. Did not
+deploy again; live development remains **2.18.0**.
 
 ## Secrets for mobile and Cloud Agents
 

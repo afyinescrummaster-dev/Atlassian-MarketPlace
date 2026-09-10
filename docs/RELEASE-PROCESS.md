@@ -9,9 +9,9 @@ Working rules (required): **`AGENTS.md`**.
 Every deploy: **`docs/DEPLOYMENT-HISTORY.md`**.  
 Official tags only: **`docs/RELEASES.md`**.
 
-> Current DI milestone is `di-v1.0.0` @ `c780ff5` (Sprint Health + Rovo
-> Intelligence). `di-v0.1.1` @ `4f44eb3` is the historical recovered
-> known-good — keep it. `di-v0.1.0` is not that source.
+> Current DI milestone is `di-v1.1.0` — Sprint Intelligence. V1 baseline
+> `di-v1.0.0` @ `c780ff5` remains. `di-v0.1.1` @ `4f44eb3` is the
+> historical recovered known-good — keep it. `di-v0.1.0` is not that source.
 
 ---
 
