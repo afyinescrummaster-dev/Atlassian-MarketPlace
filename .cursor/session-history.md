@@ -16,13 +16,15 @@ historical patterns, briefs. Do not merge to `main`. Do not create
 `di-v*` tags.
 
 ### Done
-- Branch: `feature/sprint-coaching-readiness` @ `57aa1aa`
+- Branches: `feature/sprint-coaching-readiness` @ `57aa1aa` (deployed)
+  and PR branch `cursor/sprint-coaching-readiness-0bfb` @ `9b51b53`
+  (same commits + expanded tests)
 - Domain: thresholds, description-quality, readiness, pace,
   compound-risks, coaching, history-patterns, briefs
 - Extended normalize + agile-client (description/parent/estimation,
   status changelog kept separate from membership)
 - Snapshot wiring + Rovo compact facts; UI Build `2.10.0`
-- Tests: 44 passing (32 prior + 12 new)
+- Tests: 51 passing (prior baseline + coaching matrix)
 - Forge development **3.0.0** (major bump for
   `read:board-scope.admin:jira-software`); install upgraded on demo site
 - Revision: `deploy/di/development/3.0.0`
