@@ -7,6 +7,37 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-09-10 — [Delivery Intelligence] sprint coaching / readiness (dev 3.0.0)
+
+### Goal
+Evolve DI into an evidence-based Agile coaching assistant on the
+`di-v1.1.0` baseline: readiness, pace, compound risks, coaching,
+historical patterns, briefs. Do not merge to `main`. Do not create
+`di-v*` tags.
+
+### Done
+- Branches: `feature/sprint-coaching-readiness` @ `57aa1aa` (deployed)
+  and PR branch `cursor/sprint-coaching-readiness-0bfb` @ `9b51b53`
+  (same commits + expanded tests)
+- Domain: thresholds, description-quality, readiness, pace,
+  compound-risks, coaching, history-patterns, briefs
+- Extended normalize + agile-client (description/parent/estimation,
+  status changelog kept separate from membership)
+- Snapshot wiring + Rovo compact facts; UI Build `2.10.0`
+- Tests: 51 passing (prior baseline + coaching matrix)
+- Forge development **3.0.0** (major bump for
+  `read:board-scope.admin:jira-software`); install upgraded on demo site
+- Revision: `deploy/di/development/3.0.0`
+- Rollback: `./scripts/rollback-deployment.sh di development 3.0.0`
+- Health-score formula unchanged; sprint goal never affects readiness
+
+### Out of scope (kept out)
+- Merge to `main` / official `di-v*` tag
+- Admin Health / Forge app ID changes
+- Auto Rovo invoke
+
+---
+
 ## 2026-09-10 — [Delivery Intelligence] `di-v1.1.0` on `main`
 
 ### Goal

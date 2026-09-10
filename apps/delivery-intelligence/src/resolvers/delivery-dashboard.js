@@ -53,8 +53,11 @@ export const buildSnapshotForProject = async ({
       sprint: loaded.sprint,
       issues: loaded.issues,
       changelogsByKey: loaded.changelogsByKey,
+      statusHistoriesByKey: loaded.statusHistoriesByKey || {},
+      estimation: loaded.estimation || null,
       previousSprint: loaded.previousSprint,
       previousSprintContext: loaded.previousSprintContext,
+      historicalSprintContexts: loaded.historicalSprintContexts || [],
       now,
     });
 

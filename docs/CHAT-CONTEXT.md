@@ -3,7 +3,8 @@
 This file is the handoff for Cursor mobile or a remote agent. Read it before
 changing the Forge app. Do not invent missing Jira fields or sample metrics.
 
-Last updated: 2026-09-10 (`di-v1.1.0` Sprint Intelligence on `main`)
+Last updated: 2026-09-10 (`feature/sprint-coaching-readiness` → Forge
+development **3.0.0**; official milestone on `main` remains `di-v1.1.0`)
 
 ## What this repo is
 
@@ -19,9 +20,11 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
 - Delivery Intelligence **`di-v1.1.0`** — Sprint Intelligence, on
-  `main`. Live Forge development **2.18.0**. V1 baseline `di-v1.0.0` @
-  `c780ff5` remains. Historical recovered known-good `di-v0.1.1` @
-  `4f44eb3` is kept. See `docs/RECOVERY-2.8.0.md` and
+  `main`. Working branch `feature/sprint-coaching-readiness` adds
+  readiness/pace/coaching; live Forge development **3.0.0**
+  (`deploy/di/development/3.0.0`, UI Build `2.10.0`). V1 baseline
+  `di-v1.0.0` @ `c780ff5` remains. Historical recovered known-good
+  `di-v0.1.1` @ `4f44eb3` is kept. See `docs/RECOVERY-2.8.0.md` and
   `docs/DEPLOYMENT-MODEL.md`. Deploy: `./scripts/forge-deploy.sh`.
   Rollback: `./scripts/rollback-deployment.sh`. History:
   `docs/deployments.jsonl`.
@@ -263,6 +266,19 @@ official tag using the existing `di-v*` scheme. Merged
 `feature/sprint-intelligence-core` into `main` (`a25cd5b`) and tagged
 **`di-v1.1.0`**. Did not rewrite `di-v1.0.0` or `di-v0.1.1`. Did not
 deploy again; live development remains **2.18.0**.
+
+### 2026-09-10 — Sprint coaching / readiness (Forge 3.0.0)
+
+Working branch `feature/sprint-coaching-readiness` @ `57aa1aa`. Adds
+deterministic readiness, delivery pace, compound risks, coaching
+interventions, historical patterns (≤3 completed sprints), retrospective
+questions, and brief builder (plain + markdown + open in Rovo). UI Build
+`2.10.0`. Health-score formula unchanged; sprint goal never affects
+readiness. New scope `read:board-scope.admin:jira-software` caused Forge
+major bump to development **3.0.0**
+(`deploy/di/development/3.0.0`). Install upgraded on demo site. Not
+merged to `main`; no new `di-v*` tag. Tests 44/44. Rollback:
+`./scripts/rollback-deployment.sh di development 3.0.0`.
 
 ## Secrets for mobile and Cloud Agents
 

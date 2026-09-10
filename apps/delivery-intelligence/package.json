@@ -6,7 +6,7 @@
   "main": "src/index.js",
   "scripts": {
     "lint:code": "eslint src test static/dashboard/src",
-    "test": "node --test test/*.test.js",
+    "test": "node --test test/analyze.test.js test/coaching-readiness.test.js test/compare.test.js test/drilldown.test.js test/rovo-intents.test.js test/scope-baseline.test.js",
     "build:dashboard": "npm run build --prefix static/dashboard",
     "build": "npm run build:dashboard",
     "validate": "npm run build && forge lint"

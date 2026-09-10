@@ -14,7 +14,13 @@ import "./App.css";
 
 const AGENT_KEY = "delivery-intelligence-agent";
 const AGENT_NAME = "Delivery Intelligence";
-const UI_BUILD = "2.9.2";
+const UI_BUILD = "2.10.0";
+
+const BRIEF_KEYS = {
+  team: "teamUpdate",
+  leadership: "leadershipBrief",
+  retro: "retrospectiveSummary",
+};
 
 const formatMetric = (value, suffix = "") => {
   if (value == null || Number.isNaN(value)) {
@@ -146,6 +152,8 @@ export default function App() {
   const [requestId, setRequestId] = useState(0);
   const [drilldown, setDrilldown] = useState(null);
   const [navMessage, setNavMessage] = useState(null);
+  const [briefKind, setBriefKind] = useState("team");
+  const [copyMessage, setCopyMessage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -243,7 +251,7 @@ export default function App() {
     }
   };
 
-  const openRovo = async (intent) => {
+  const openRovo = async (intent, customPrompt = null) => {
     setAiMessage(null);
     if (!snapshot) {
       return;
@@ -272,13 +280,41 @@ export default function App() {
         type: "forge",
         agentKey: AGENT_KEY,
         agentName: AGENT_NAME,
-        prompt: buildUserPrompt(snapshot, intent),
+        prompt: customPrompt || buildUserPrompt(snapshot, intent),
       });
     } catch {
       setAiMessage(
         "Could not open the Delivery Intelligence agent. Check that Rovo is enabled and this app is installed.",
       );
     }
+  };
+
+  const selectedBrief = snapshot?.briefs?.[BRIEF_KEYS[briefKind]] || null;
+
+  const copyBrief = async (asMarkdown = false) => {
+    setCopyMessage(null);
+    if (!selectedBrief) {
+      return;
+    }
+    const text = asMarkdown ? selectedBrief.markdown : selectedBrief.plain;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        setCopyMessage(asMarkdown ? "Markdown copied." : "Plain text copied.");
+        return;
+      }
+    } catch {
+      // fall through
+    }
+    setCopyMessage("Could not copy automatically. Select the brief text manually.");
+  };
+
+  const openBriefInRovo = () => {
+    if (!selectedBrief) {
+      return;
+    }
+    const prompt = `Review and refine this ${selectedBrief.title} using Delivery Intelligence facts. Keep coaching language careful and do not invent metrics.\n\n${selectedBrief.plain}`;
+    openRovo(ROVO_INTENTS.brief, prompt);
   };
 
   const lists = useMemo(() => {
@@ -507,7 +543,7 @@ export default function App() {
       ) : (
         <>
           <section>
-            <h2 className="section-title">Sprint Overview</h2>
+            <h2 className="section-title">Sprint Diagnosis</h2>
             <div className="grid-2">
               <article className="card">
                 <div className="kicker">Sprint Health</div>
@@ -584,10 +620,154 @@ export default function App() {
                 <div className="l">Stale</div>
               </button>
             </section>
+
+            <h3 className="section-title">What needs attention</h3>
+            {(snapshot.topAnomalies || []).length === 0 ? (
+              <article className="card">
+                <p className="sub">
+                  No ranked anomalies were detected from the current sprint data.
+                </p>
+              </article>
+            ) : (
+              snapshot.topAnomalies.map((item) => (
+                <article className="anomaly" key={item.id}>
+                  <div className="anomaly-head">
+                    <span className={`pill ${item.severity === "High" ? "bad" : ""}`}>
+                      {item.severity}
+                    </span>
+                    <strong>{item.title}</strong>
+                  </div>
+                  <p className="sub">{item.explanation || item.summary}</p>
+                  {item.evidence ? <p className="note">{item.evidence}</p> : null}
+                  <div className="anomaly-meta">
+                    {item.affectedIssueCount != null
+                      ? `${item.affectedIssueCount} issue${item.affectedIssueCount === 1 ? "" : "s"}`
+                      : null}
+                    {item.issueKey ? ` · ${item.issueKey}` : ""}
+                  </div>
+                  {item.suggestedAction && item.drillDown ? (
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => showDrilldown(item.drillDown)}
+                    >
+                      {item.suggestedAction}
+                    </button>
+                  ) : null}
+                </article>
+              ))
+            )}
+            {drilldown && !["original", "added"].includes(drilldown)
+              ? renderDrilldown(drilldown)
+              : null}
+            {navMessage && !["original", "added"].includes(drilldown) ? (
+              <p className="note">{navMessage}</p>
+            ) : null}
           </section>
 
           <section>
-            <h2 className="section-title">Scope Movement</h2>
+            <h2 className="section-title">Sprint Readiness</h2>
+            <article className="card">
+              <div className="kicker">Assessment</div>
+              <p className="sub">
+                {snapshot.readiness?.assessment || "Partial data"}
+                {snapshot.readiness?.sprintGoalPolicy?.affectsReadiness === false
+                  ? " · Sprint goal does not affect readiness"
+                  : ""}
+              </p>
+              <p className="note">
+                {(snapshot.readinessFindings || []).length} readiness finding
+                {(snapshot.readinessFindings || []).length === 1 ? "" : "s"}
+                {snapshot.readiness?.counts?.missingDescription != null
+                  ? ` · ${snapshot.readiness.counts.missingDescription} missing description`
+                  : ""}
+                {snapshot.readiness?.counts?.acceptanceCriteriaNotDetected != null
+                  ? ` · ${snapshot.readiness.counts.acceptanceCriteriaNotDetected} AC not detected`
+                  : ""}
+              </p>
+            </article>
+            {(snapshot.readinessFindings || []).slice(0, 8).map((item) => (
+              <article className="anomaly" key={`${item.signalType}-${item.issueKey}`}>
+                <div className="anomaly-head">
+                  <span
+                    className={`pill ${
+                      item.severity === "high" || item.severity === "critical" ? "bad" : ""
+                    }`}
+                  >
+                    {item.severity}
+                  </span>
+                  <strong>
+                    {item.issueKey ? `${item.issueKey} · ` : ""}
+                    {item.signalType?.replace(/_/g, " ")}
+                  </strong>
+                </div>
+                <p className="sub">{item.explanation}</p>
+                {item.evidence ? <p className="note">Evidence: {item.evidence}</p> : null}
+                {item.suggestedAction ? (
+                  <p className="note">Suggested: {item.suggestedAction}</p>
+                ) : null}
+                {item.issueKey ? (
+                  <button className="btn" type="button" onClick={() => openIssue(item.issueKey)}>
+                    Open {item.issueKey}
+                  </button>
+                ) : null}
+              </article>
+            ))}
+          </section>
+
+          <section>
+            <h2 className="section-title">Delivery Pace</h2>
+            <article className="card">
+              <div className="pace-grid">
+                <div>
+                  <div className="kicker">Elapsed</div>
+                  <div className="n">
+                    {formatMetric(snapshot.sprintPace?.elapsedPercent, "%")}
+                  </div>
+                </div>
+                <div>
+                  <div className="kicker">Completed</div>
+                  <div className="n">
+                    {formatMetric(snapshot.sprintPace?.completedPercent, "%")}
+                  </div>
+                </div>
+                <div>
+                  <div className="kicker">Pacing</div>
+                  <div className="n">
+                    {(snapshot.sprintPace?.pacingState || "unavailable").replace(/_/g, " ")}
+                  </div>
+                </div>
+                <div>
+                  <div className="kicker">Basis</div>
+                  <div className="n">
+                    {(snapshot.sprintPace?.measurementBasis || "issues").replace(/_/g, " ")}
+                  </div>
+                </div>
+              </div>
+              <p className="note">
+                {snapshot.sprintPace?.note ||
+                  "Transparent pacing assessment — not an advanced forecast."}
+              </p>
+            </article>
+            {(snapshot.deliveryPace?.signals || []).slice(0, 6).map((signal) => (
+              <article className="anomaly" key={signal.id}>
+                <div className="anomaly-head">
+                  <span
+                    className={`pill ${
+                      signal.severity === "high" || signal.severity === "critical" ? "bad" : ""
+                    }`}
+                  >
+                    {signal.severity || "review"}
+                  </span>
+                  <strong>{String(signal.id || "pace").replace(/_/g, " ")}</strong>
+                </div>
+                <p className="sub">{signal.explanation}</p>
+              </article>
+            ))}
+          </section>
+
+          <section>
+            <h2 className="section-title">Scope and Risk</h2>
             <article className="card scope-card">
               <p className="sub scope-intro">
                 Original commitment versus work added after the sprint started.
@@ -650,56 +830,78 @@ export default function App() {
               </div>
             </article>
             {["original", "added"].includes(drilldown) ? renderDrilldown(drilldown) : null}
-            {navMessage ? <p className="note">{navMessage}</p> : null}
-          </section>
+            {navMessage && ["original", "added"].includes(drilldown) ? (
+              <p className="note">{navMessage}</p>
+            ) : null}
 
-          <section>
-            <h2 className="section-title">What needs attention</h2>
-            {(snapshot.topAnomalies || []).length === 0 ? (
+            <h3 className="section-title">Compound risks</h3>
+            {(snapshot.compoundRisks?.items || []).length === 0 ? (
               <article className="card">
-                <p className="sub">
-                  No ranked anomalies were detected from the current sprint data.
-                </p>
+                <p className="sub">No compound per-issue risks were consolidated.</p>
               </article>
             ) : (
-              snapshot.topAnomalies.map((item) => (
-                <article className="anomaly" key={item.id}>
+              (snapshot.compoundRisks?.items || []).slice(0, 8).map((item) => (
+                <article className="anomaly" key={item.issueKey}>
                   <div className="anomaly-head">
-                    <span className={`pill ${item.severity === "High" ? "bad" : ""}`}>
-                      {item.severity}
-                    </span>
-                    <strong>{item.title}</strong>
-                  </div>
-                  <p className="sub">{item.explanation || item.summary}</p>
-                  {item.evidence ? <p className="note">{item.evidence}</p> : null}
-                  <div className="anomaly-meta">
-                    {item.affectedIssueCount != null
-                      ? `${item.affectedIssueCount} issue${item.affectedIssueCount === 1 ? "" : "s"}`
-                      : null}
-                    {item.issueKey ? ` · ${item.issueKey}` : ""}
-                  </div>
-                  {item.suggestedAction && item.drillDown ? (
-                    <button
-                      className="btn"
-                      type="button"
-                      onClick={() => showDrilldown(item.drillDown)}
+                    <span
+                      className={`pill ${
+                        item.attentionLevel === "high" || item.attentionLevel === "critical"
+                          ? "bad"
+                          : ""
+                      }`}
                     >
-                      {item.suggestedAction}
-                    </button>
-                  ) : null}
+                      {item.attentionLevel}
+                    </span>
+                    <strong>{item.issueKey}</strong>
+                  </div>
+                  <p className="sub">{item.summary}</p>
+                  <p className="note">{(item.riskCodes || []).join(", ")}</p>
+                  <button className="btn" type="button" onClick={() => openIssue(item.issueKey)}>
+                    Open {item.issueKey}
+                  </button>
                 </article>
               ))
             )}
-            {drilldown && !["original", "added"].includes(drilldown)
-              ? renderDrilldown(drilldown)
-              : null}
-            {navMessage && !["original", "added"].includes(drilldown) ? (
-              <p className="note">{navMessage}</p>
-            ) : null}
           </section>
 
           <section>
-            <h2 className="section-title">Sprint Trends</h2>
+            <h2 className="section-title">Coach&apos;s Attention</h2>
+            {(snapshot.coachingInterventions || []).length === 0 ? (
+              <article className="card">
+                <p className="sub">No coaching interventions were generated.</p>
+              </article>
+            ) : (
+              snapshot.coachingInterventions.map((item) => (
+                <article className="anomaly coaching" key={item.id}>
+                  <div className="anomaly-head">
+                    <span
+                      className={`pill ${
+                        item.attentionLevel === "high" || item.attentionLevel === "critical"
+                          ? "bad"
+                          : ""
+                      }`}
+                    >
+                      {item.attentionLevel}
+                    </span>
+                    <strong>{item.title}</strong>
+                  </div>
+                  <p className="note">
+                    <strong>Evidence:</strong> {item.evidence}
+                  </p>
+                  <p className="sub">
+                    <strong>Interpretation:</strong> {item.interpretation}
+                  </p>
+                  <p className="sub">
+                    <strong>Suggested intervention:</strong> {item.suggestedIntervention}
+                  </p>
+                  {item.limitation ? <p className="note">{item.limitation}</p> : null}
+                </article>
+              ))
+            )}
+          </section>
+
+          <section>
+            <h2 className="section-title">Learning Across Sprints</h2>
             <article className="card">
               <div className="kicker">Current sprint vs previous sprint</div>
               {snapshot.comparison?.capability?.status === "unavailable" ||
@@ -753,9 +955,7 @@ export default function App() {
                               : formatSigned(
                                   row.delta,
                                   row.key === "healthScore" || row.key.includes("Percent")
-                                    ? row.key === "healthScore"
-                                      ? " points"
-                                      : " points"
+                                    ? " points"
                                     : "",
                                 )}
                           </span>
@@ -766,19 +966,107 @@ export default function App() {
                 </>
               )}
             </article>
+
+            <h3 className="section-title">Historical patterns</h3>
+            {(snapshot.historicalPatterns?.patterns || []).length === 0 ? (
+              <article className="card">
+                <p className="sub">
+                  {snapshot.historicalPatterns?.capability?.reason ||
+                    "No multi-sprint patterns were detected yet."}
+                </p>
+              </article>
+            ) : (
+              snapshot.historicalPatterns.patterns.map((pattern) => (
+                <article className="anomaly" key={pattern.id}>
+                  <div className="anomaly-head">
+                    <span className="pill">{pattern.attentionLevel}</span>
+                    <strong>{pattern.title}</strong>
+                  </div>
+                  <p className="note">Evidence: {pattern.evidence}</p>
+                  <p className="sub">{pattern.interpretation}</p>
+                  <p className="note">Focus: {pattern.suggestedFocus}</p>
+                </article>
+              ))
+            )}
+
+            {(snapshot.retrospectiveQuestions || []).length > 0 ? (
+              <article className="card">
+                <div className="kicker">Retrospective questions</div>
+                <ul className="question-list">
+                  {snapshot.retrospectiveQuestions.map((question) => (
+                    <li key={question}>{question}</li>
+                  ))}
+                </ul>
+              </article>
+            ) : null}
           </section>
         </>
       )}
 
       <section className="ai-panel card">
-        <div className="kicker">AI actions</div>
+        <div className="kicker">Brief Builder / AI Actions</div>
         <p className="sub">
-          Rovo is user-triggered only. The dashboard never calls AI automatically.
-          Each action retrieves deterministic sprint facts behind the scenes.
+          Briefs are deterministic. Rovo is user-triggered only and never runs on
+          load or refresh.
         </p>
         <div className="btn-row">
           <button
+            className={`btn ${briefKind === "team" ? "primary" : ""}`}
+            type="button"
+            onClick={() => setBriefKind("team")}
+          >
+            Team update
+          </button>
+          <button
+            className={`btn ${briefKind === "leadership" ? "primary" : ""}`}
+            type="button"
+            onClick={() => setBriefKind("leadership")}
+          >
+            Leadership brief
+          </button>
+          <button
+            className={`btn ${briefKind === "retro" ? "primary" : ""}`}
+            type="button"
+            onClick={() => setBriefKind("retro")}
+          >
+            Retro summary
+          </button>
+        </div>
+        {selectedBrief ? (
+          <pre className="brief-preview">{selectedBrief.plain}</pre>
+        ) : (
+          <p className="sub">Briefs appear once an active sprint snapshot is available.</p>
+        )}
+        <div className="btn-row">
+          <button
+            className="btn"
+            type="button"
+            disabled={!selectedBrief}
+            onClick={() => copyBrief(false)}
+          >
+            Copy
+          </button>
+          <button
+            className="btn"
+            type="button"
+            disabled={!selectedBrief}
+            onClick={() => copyBrief(true)}
+          >
+            Copy markdown
+          </button>
+          <button
             className="btn primary"
+            type="button"
+            disabled={!selectedBrief || !snapshot?.sprint}
+            onClick={openBriefInRovo}
+          >
+            Open in Rovo
+          </button>
+        </div>
+        {copyMessage ? <p className="note">{copyMessage}</p> : null}
+        <div className="btn-row" style={{ marginTop: 12 }}>
+          <button
+            className="btn"
             type="button"
             disabled={!snapshot?.sprint}
             onClick={() => openRovo(ROVO_INTENTS.explain)}
