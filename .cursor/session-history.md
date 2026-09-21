@@ -7,6 +7,33 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-09-21 — [Delivery Intelligence] tabbed dashboard IA (dev 3.1.0)
+
+### Goal
+Redesign the Delivery Intelligence report from a long stacked-card page
+into the mockup’s tabbed two-column Jira-native IA. Preserve every
+existing calculation. Do not merge to `main`. Do not create `di-v*` tags.
+
+### Done
+- Branch: `feature/dashboard-ia-tabs` @ `b1a1cebac03a`
+- UI-only: tabs Overview / Readiness / Delivery Pace / Scope & Risk /
+  Learning / Briefs; grouped findings with drill-downs; no internal
+  ids such as `aging-PLAT-48`
+- Overview: compact health/KPIs, top 3 Coach’s Attention, category
+  readiness counts, pace summary, compact Scope Movement, Brief Builder,
+  one Learning insight
+- Sprint end date passed replaces active pacing forecast copy
+- UI Build `2.11.0`; engine/health/Rovo/app IDs unchanged
+- Tests: 58 passing (51 prior + 7 IA); Forge lint clean
+- Forge development **3.1.0** (`deploy/di/development/3.1.0`)
+- Rollback: `./scripts/rollback-deployment.sh di development 3.1.0`
+
+### Out of scope (kept out)
+- Merge to `main` / official `di-v*` tag
+- Deterministic engine, health formula, scopes, app IDs
+
+---
+
 ## 2026-09-10 — [Delivery Intelligence] sprint coaching / readiness (dev 3.0.0)
 
 ### Goal

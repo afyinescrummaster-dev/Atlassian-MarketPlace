@@ -267,6 +267,20 @@ official tag using the existing `di-v*` scheme. Merged
 **`di-v1.1.0`**. Did not rewrite `di-v1.0.0` or `di-v0.1.1`. Did not
 deploy again; live development remains **2.18.0**.
 
+### 2026-09-21 — Tabbed dashboard IA (Forge 3.1.0)
+
+UI-only redesign on `feature/dashboard-ia-tabs` @ `b1a1cebac03a`. Tabs:
+Overview, Readiness, Delivery Pace, Scope & Risk, Learning, Briefs.
+Overview is a two-column summary; repeated findings (stale, weak
+descriptions, missing AC, aging work) are grouped with drill-downs.
+Internal ids such as `aging-PLAT-48` are not shown. If the sprint end
+date has passed, pacing copy is “Sprint end date passed,” not an active
+forecast. Engine, health formula, Rovo, app IDs, and scopes unchanged.
+UI Build `2.11.0`. Tests 58/58. Live Forge development **3.1.0**
+(`deploy/di/development/3.1.0`). Not merged to `main`; no new `di-v*`
+tag. Rollback:
+`./scripts/rollback-deployment.sh di development 3.1.0`.
+
 ### 2026-09-10 — Sprint coaching / readiness (Forge 3.0.0)
 
 Working branch `feature/sprint-coaching-readiness` @ `57aa1aa`. Adds
