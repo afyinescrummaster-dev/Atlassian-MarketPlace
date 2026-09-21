@@ -46,6 +46,7 @@ export default [
       globals: {
         document: "readonly",
         window: "readonly",
+        navigator: "readonly",
       },
     },
     plugins: {

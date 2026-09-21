@@ -10,11 +10,25 @@ import {
   jiraPathForKeys,
   jqlForSprint,
 } from "../../../src/delivery-intelligence/jira-links.js";
+import {
+  DASHBOARD_TABS,
+  allFindingsCount,
+  attentionLevelLabel,
+  buildCoachAttentionItems,
+  groupPaceSignals,
+  groupReadinessFindings,
+  isSprintEndPassed,
+  overviewReadinessCounts,
+  paceHeadline,
+  paceSummaryCopy,
+  pickLearningInsight,
+  topCoachAttention,
+} from "./dashboard-ia.js";
 import "./App.css";
 
 const AGENT_KEY = "delivery-intelligence-agent";
 const AGENT_NAME = "Delivery Intelligence";
-const UI_BUILD = "2.10.0";
+const UI_BUILD = "2.11.0";
 
 const BRIEF_KEYS = {
   team: "teamUpdate",
@@ -81,6 +95,16 @@ const directionLabel = (direction) => {
   return "Unavailable";
 };
 
+const readinessTone = (assessment) => {
+  if (assessment === "Ready") {
+    return "good";
+  }
+  if (assessment === "Needs attention") {
+    return "bad";
+  }
+  return "";
+};
+
 const IssueRow = ({ issue, onOpen }) => {
   const parts = [issue.statusName, issue.reason].filter(Boolean);
   if (issue.ageDays != null) {
@@ -141,6 +165,27 @@ const DrilldownPanel = ({ title, onClose, onOpenJira, canOpenJira, children }) =
   </article>
 );
 
+const AttentionRow = ({ item, active, onOpen }) => (
+  <div className={`attention-row ${active ? "active" : ""}`}>
+    <div className="attention-copy">
+      <div className="attention-head">
+        <span
+          className={`pill ${
+            item.severity === "high" || item.severity === "critical" ? "bad" : ""
+          }`}
+        >
+          {attentionLevelLabel(item.severity)}
+        </span>
+        <strong>{item.title}</strong>
+      </div>
+      <p className="sub attention-summary">{item.summary}</p>
+    </div>
+    <button className="btn" type="button" onClick={() => onOpen(item.drillId)}>
+      {item.suggestedAction || "View details"}
+    </button>
+  </div>
+);
+
 export default function App() {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
@@ -154,6 +199,7 @@ export default function App() {
   const [navMessage, setNavMessage] = useState(null);
   const [briefKind, setBriefKind] = useState("team");
   const [copyMessage, setCopyMessage] = useState(null);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     let cancelled = false;
@@ -317,6 +363,30 @@ export default function App() {
     openRovo(ROVO_INTENTS.brief, prompt);
   };
 
+  const issueIndex = useMemo(() => {
+    const map = new Map();
+    if (!snapshot) {
+      return map;
+    }
+    const pools = [
+      snapshot.originalCommittedIssues,
+      snapshot.addedIssues,
+      snapshot.blockedIssues,
+      snapshot.carryoverIssues,
+      snapshot.staleIssues,
+      snapshot.doneIssues,
+      snapshot.openIssues,
+    ];
+    for (const pool of pools) {
+      for (const issue of pool || []) {
+        if (issue?.key && !map.has(issue.key)) {
+          map.set(issue.key, issue);
+        }
+      }
+    }
+    return map;
+  }, [snapshot]);
+
   const lists = useMemo(() => {
     if (!snapshot) {
       return {};
@@ -357,6 +427,67 @@ export default function App() {
     };
   }, [snapshot]);
 
+  const readinessGroups = useMemo(
+    () => groupReadinessFindings(snapshot?.readinessFindings || []),
+    [snapshot],
+  );
+  const paceGroups = useMemo(
+    () => groupPaceSignals(snapshot?.deliveryPace?.signals || []),
+    [snapshot],
+  );
+  const coachItems = useMemo(() => buildCoachAttentionItems(snapshot), [snapshot]);
+  const overviewCoachItems = useMemo(() => topCoachAttention(snapshot, 3), [snapshot]);
+  const readinessCounts = useMemo(
+    () => overviewReadinessCounts(snapshot?.readiness),
+    [snapshot],
+  );
+  const learningInsight = useMemo(() => pickLearningInsight(snapshot), [snapshot]);
+  const coachingById = useMemo(() => {
+    const map = new Map();
+    for (const item of snapshot?.coachingInterventions || []) {
+      map.set(`coach:${item.id}`, item);
+    }
+    return map;
+  }, [snapshot]);
+  const sprintEnded = useMemo(
+    () => isSprintEndPassed(snapshot?.sprint),
+    [snapshot],
+  );
+  const findingsTotal = allFindingsCount(snapshot);
+
+  const groupedLookup = useMemo(() => {
+    const cardsForKeys = (keys, reason) =>
+      cardsFromIssuesOrKeys(
+        (keys || []).map((key) => issueIndex.get(key)).filter(Boolean),
+        keys,
+        reason,
+      );
+    const map = new Map();
+    for (const group of readinessGroups) {
+      map.set(group.id, {
+        title: group.title,
+        issues: cardsForKeys(group.issueKeys, group.title),
+        empty: "No issues were grouped for this finding.",
+      });
+    }
+    for (const group of paceGroups) {
+      const issues =
+        group.issueKeys.length > 0
+          ? cardsForKeys(group.issueKeys, group.title)
+          : (group.signals || [])
+              .map((signal) => signal.issueKey)
+              .filter(Boolean)
+              .map((key) => issueIndex.get(key) || { key, summary: "", reason: group.title });
+      map.set(group.id, {
+        title: group.title,
+        issues,
+        empty: group.explanation || "No issues were grouped for this signal.",
+        note: group.explanation,
+      });
+    }
+    return map;
+  }, [readinessGroups, paceGroups, issueIndex]);
+
   const pathForDrilldown = (id) => {
     if (id === "completion") {
       return (
@@ -365,6 +496,16 @@ export default function App() {
         ) || jiraPathForKeys([...(lists.done || []), ...(lists.open || [])].map((row) => row.key))
       );
     }
+    if (id === "findings") {
+      const keys = readinessGroups.flatMap((group) => group.issueKeys);
+      return jiraPathForKeys(keys);
+    }
+    if (coachingById.has(id)) {
+      return jiraPathForKeys(coachingById.get(id).issueKeys || []);
+    }
+    if (groupedLookup.has(id)) {
+      return jiraPathForKeys((groupedLookup.get(id).issues || []).map((row) => row.key));
+    }
     const issues = lists[id] || [];
     return jiraPathForKeys(issues.map((row) => row.key));
   };
@@ -372,6 +513,12 @@ export default function App() {
   const showDrilldown = (id) => {
     setNavMessage(null);
     setDrilldown((current) => (current === id ? null : id));
+  };
+
+  const switchTab = (tabId, nextDrilldown = null) => {
+    setActiveTab(tabId);
+    setNavMessage(null);
+    setDrilldown(nextDrilldown);
   };
 
   const openInJira = async (id) => {
@@ -460,6 +607,80 @@ export default function App() {
       );
     }
 
+    if (id === "findings") {
+      return (
+        <DrilldownPanel
+          title={`All findings (${findingsTotal})`}
+          onClose={() => setDrilldown(null)}
+          canOpenJira={Boolean(pathForDrilldown("findings"))}
+          onOpenJira={() => openInJira("findings")}
+        >
+          <div className="grouped-list">
+            {coachItems.map((item) => (
+              <AttentionRow
+                key={item.id}
+                item={item}
+                active={false}
+                onOpen={(nextId) => showDrilldown(nextId)}
+              />
+            ))}
+          </div>
+        </DrilldownPanel>
+      );
+    }
+
+    if (coachingById.has(id)) {
+      const item = coachingById.get(id);
+      const issues = cardsFromIssuesOrKeys(
+        (item.issueKeys || []).map((key) => issueIndex.get(key)).filter(Boolean),
+        item.issueKeys,
+        item.title,
+      );
+      return (
+        <DrilldownPanel
+          title={item.title}
+          onClose={() => setDrilldown(null)}
+          canOpenJira={Boolean(jiraPathForKeys(item.issueKeys || []))}
+          onOpenJira={() => openInJira(id)}
+        >
+          <p className="note">
+            <strong>Evidence:</strong> {item.evidence}
+          </p>
+          <p className="sub">
+            <strong>Interpretation:</strong> {item.interpretation}
+          </p>
+          <p className="sub">
+            <strong>Suggested intervention:</strong> {item.suggestedIntervention}
+          </p>
+          {item.limitation ? <p className="note">{item.limitation}</p> : null}
+          <IssueList
+            issues={issues}
+            empty="This recommendation is not tied to a specific issue list."
+            onOpen={openIssue}
+          />
+        </DrilldownPanel>
+      );
+    }
+
+    if (groupedLookup.has(id)) {
+      const config = groupedLookup.get(id);
+      return (
+        <DrilldownPanel
+          title={config.title}
+          onClose={() => setDrilldown(null)}
+          canOpenJira={Boolean(pathForDrilldown(id))}
+          onOpenJira={() => openInJira(id)}
+        >
+          {config.note ? <p className="note">{config.note}</p> : null}
+          <IssueList
+            issues={config.issues}
+            empty={config.empty}
+            onOpen={openIssue}
+          />
+        </DrilldownPanel>
+      );
+    }
+
     const config = {
       original: {
         title: "Original commitment",
@@ -504,6 +725,119 @@ export default function App() {
     );
   };
 
+  const renderBriefBuilder = (compact = false) => (
+    <article className={`card brief-card ${compact ? "compact" : ""}`}>
+      <div className="card-head">
+        <h3>Brief Builder</h3>
+      </div>
+      <p className="sub">
+        {compact
+          ? "Create a concise team update based on the latest sprint data, key risks, and top recommendations."
+          : "Briefs are deterministic. Rovo is user-triggered only and never runs on load or refresh."}
+      </p>
+      <div className="btn-row">
+        <button
+          className={`btn ${briefKind === "team" ? "primary" : ""}`}
+          type="button"
+          onClick={() => setBriefKind("team")}
+        >
+          Team update
+        </button>
+        <button
+          className={`btn ${briefKind === "leadership" ? "primary" : ""}`}
+          type="button"
+          onClick={() => setBriefKind("leadership")}
+        >
+          Leadership brief
+        </button>
+        <button
+          className={`btn ${briefKind === "retro" ? "primary" : ""}`}
+          type="button"
+          onClick={() => setBriefKind("retro")}
+        >
+          Retrospective
+        </button>
+      </div>
+      {!compact && selectedBrief ? (
+        <pre className="brief-preview">{selectedBrief.plain}</pre>
+      ) : null}
+      {!compact && !selectedBrief ? (
+        <p className="sub">Briefs appear once an active sprint snapshot is available.</p>
+      ) : null}
+      <div className="btn-row">
+        <button
+          className="btn"
+          type="button"
+          disabled={!selectedBrief}
+          onClick={() => copyBrief(false)}
+        >
+          Copy brief
+        </button>
+        {!compact ? (
+          <button
+            className="btn"
+            type="button"
+            disabled={!selectedBrief}
+            onClick={() => copyBrief(true)}
+          >
+            Copy markdown
+          </button>
+        ) : null}
+        <button
+          className="btn primary"
+          type="button"
+          disabled={!selectedBrief || !snapshot?.sprint}
+          onClick={openBriefInRovo}
+        >
+          Open in Rovo
+        </button>
+      </div>
+      {copyMessage ? <p className="note">{copyMessage}</p> : null}
+      {!compact ? (
+        <>
+          <div className="btn-row" style={{ marginTop: 12 }}>
+            <button
+              className="btn"
+              type="button"
+              disabled={!snapshot?.sprint}
+              onClick={() => openRovo(ROVO_INTENTS.explain)}
+            >
+              Explain sprint
+            </button>
+            <button
+              className="btn"
+              type="button"
+              disabled={!snapshot?.sprint}
+              onClick={() => openRovo(ROVO_INTENTS.recommend)}
+            >
+              Recommend actions
+            </button>
+            <button
+              className="btn"
+              type="button"
+              disabled={!snapshot?.sprint}
+              onClick={() => openRovo(ROVO_INTENTS.brief)}
+            >
+              Generate leadership brief
+            </button>
+          </div>
+          {rovoEnabled === false ? (
+            <p className="note">
+              Atlassian Rovo is not enabled on this site. Deterministic metrics
+              remain available; AI explanations require Rovo on a paid Jira plan.
+            </p>
+          ) : null}
+          {aiMessage ? <p className="note">{aiMessage}</p> : null}
+        </>
+      ) : null}
+    </article>
+  );
+
+  const healthPercent = Math.max(
+    0,
+    Math.min(100, Number(snapshot.healthScore) || 0),
+  );
+
   return (
     <div className="shell">
       <header className="header">
@@ -515,15 +849,22 @@ export default function App() {
             Build {UI_BUILD}
           </div>
         </div>
-        <div className="btn-row">
-          <button
-            className="btn"
-            type="button"
-            disabled={refreshing}
-            onClick={refresh}
-          >
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </button>
+        <div className="header-aside">
+          {snapshot?.generatedAt ? (
+            <div className="meta">
+              Last updated {new Date(snapshot.generatedAt).toLocaleString()}
+            </div>
+          ) : null}
+          <div className="btn-row">
+            <button
+              className="btn"
+              type="button"
+              disabled={refreshing}
+              onClick={refresh}
+            >
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -542,42 +883,34 @@ export default function App() {
         </article>
       ) : (
         <>
-          <section>
-            <h2 className="section-title">Sprint Diagnosis</h2>
-            <div className="grid-2">
-              <article className="card">
-                <div className="kicker">Sprint Health</div>
+          <section className="health-banner" aria-label="Sprint health summary">
+            <article className="card health-score-card">
+              <div className="score-row">
                 <div className="score">
                   {formatMetric(snapshot.healthScore)} / {snapshot.healthMax || 100}
                 </div>
-                <div style={{ marginTop: 8 }}>
-                  <span className={`pill ${statusClass(snapshot.healthStatus)}`}>
-                    {snapshot.healthStatus || "—"}
-                  </span>
-                </div>
-              </article>
-              <article className="card">
-                <div className="kicker">Snapshot</div>
-                <p className="sub">
-                  Generated {new Date(snapshot.generatedAt).toLocaleString()}
+                <span className={`pill ${statusClass(snapshot.healthStatus)}`}>
+                  {snapshot.healthStatus || "—"}
+                </span>
+              </div>
+              <p className="sub">
+                Generated {new Date(snapshot.generatedAt).toLocaleString()}
+              </p>
+              <p className="sub">
+                {snapshot.currentIssueCount ?? snapshot.totalIssueCount ?? 0} current
+                {snapshot.originalCommittedCount != null
+                  ? ` · ${snapshot.originalCommittedCount} original commitment`
+                  : ""}
+                {snapshot.addedIssueCount != null
+                  ? ` · ${snapshot.addedIssueCount} added after start`
+                  : ""}
+              </p>
+              {(snapshot.limitations || []).slice(0, 2).map((item) => (
+                <p className="note" key={item}>
+                  {item}
                 </p>
-                <p className="sub">
-                  {snapshot.currentIssueCount ?? snapshot.totalIssueCount ?? 0} current
-                  {snapshot.originalCommittedCount != null
-                    ? ` · ${snapshot.originalCommittedCount} original commitment`
-                    : ""}
-                  {snapshot.addedIssueCount != null
-                    ? ` · ${snapshot.addedIssueCount} added after start`
-                    : ""}
-                </p>
-                {(snapshot.limitations || []).slice(0, 2).map((item) => (
-                  <p className="sub" key={item}>
-                    {item}
-                  </p>
-                ))}
-              </article>
-            </div>
-
+              ))}
+            </article>
             <section className="kpi-grid" aria-label="Sprint KPIs">
               <button
                 className={`kpi ${drilldown === "completion" ? "active" : ""}`}
@@ -592,8 +925,8 @@ export default function App() {
                 type="button"
                 onClick={() => showDrilldown("added")}
               >
-                <div className="n">{formatMetric(snapshot.scopeChangePercent, "%")}</div>
-                <div className="l">Scope change</div>
+                <div className="n">{formatSigned(snapshot.scopeChangePercent, "%")}</div>
+                <div className="l">Scope growth</div>
               </button>
               <button
                 className={`kpi ${drilldown === "carryover" ? "active" : ""}`}
@@ -620,484 +953,500 @@ export default function App() {
                 <div className="l">Stale</div>
               </button>
             </section>
-
-            <h3 className="section-title">What needs attention</h3>
-            {(snapshot.topAnomalies || []).length === 0 ? (
-              <article className="card">
-                <p className="sub">
-                  No ranked anomalies were detected from the current sprint data.
-                </p>
-              </article>
-            ) : (
-              snapshot.topAnomalies.map((item) => (
-                <article className="anomaly" key={item.id}>
-                  <div className="anomaly-head">
-                    <span className={`pill ${item.severity === "High" ? "bad" : ""}`}>
-                      {item.severity}
-                    </span>
-                    <strong>{item.title}</strong>
-                  </div>
-                  <p className="sub">{item.explanation || item.summary}</p>
-                  {item.evidence ? <p className="note">{item.evidence}</p> : null}
-                  <div className="anomaly-meta">
-                    {item.affectedIssueCount != null
-                      ? `${item.affectedIssueCount} issue${item.affectedIssueCount === 1 ? "" : "s"}`
-                      : null}
-                    {item.issueKey ? ` · ${item.issueKey}` : ""}
-                  </div>
-                  {item.suggestedAction && item.drillDown ? (
-                    <button
-                      className="btn"
-                      type="button"
-                      onClick={() => showDrilldown(item.drillDown)}
-                    >
-                      {item.suggestedAction}
-                    </button>
-                  ) : null}
-                </article>
-              ))
-            )}
-            {drilldown && !["original", "added"].includes(drilldown)
-              ? renderDrilldown(drilldown)
-              : null}
-            {navMessage && !["original", "added"].includes(drilldown) ? (
-              <p className="note">{navMessage}</p>
-            ) : null}
           </section>
 
-          <section>
-            <h2 className="section-title">Sprint Readiness</h2>
-            <article className="card">
-              <div className="kicker">Assessment</div>
-              <p className="sub">
-                {snapshot.readiness?.assessment || "Partial data"}
-                {snapshot.readiness?.sprintGoalPolicy?.affectsReadiness === false
-                  ? " · Sprint goal does not affect readiness"
-                  : ""}
-              </p>
-              <p className="note">
-                {(snapshot.readinessFindings || []).length} readiness finding
-                {(snapshot.readinessFindings || []).length === 1 ? "" : "s"}
-                {snapshot.readiness?.counts?.missingDescription != null
-                  ? ` · ${snapshot.readiness.counts.missingDescription} missing description`
-                  : ""}
-                {snapshot.readiness?.counts?.acceptanceCriteriaNotDetected != null
-                  ? ` · ${snapshot.readiness.counts.acceptanceCriteriaNotDetected} AC not detected`
-                  : ""}
-              </p>
-            </article>
-            {(snapshot.readinessFindings || []).slice(0, 8).map((item) => (
-              <article className="anomaly" key={`${item.signalType}-${item.issueKey}`}>
-                <div className="anomaly-head">
-                  <span
-                    className={`pill ${
-                      item.severity === "high" || item.severity === "critical" ? "bad" : ""
-                    }`}
-                  >
-                    {item.severity}
-                  </span>
-                  <strong>
-                    {item.issueKey ? `${item.issueKey} · ` : ""}
-                    {item.signalType?.replace(/_/g, " ")}
-                  </strong>
-                </div>
-                <p className="sub">{item.explanation}</p>
-                {item.evidence ? <p className="note">Evidence: {item.evidence}</p> : null}
-                {item.suggestedAction ? (
-                  <p className="note">Suggested: {item.suggestedAction}</p>
-                ) : null}
-                {item.issueKey ? (
-                  <button className="btn" type="button" onClick={() => openIssue(item.issueKey)}>
-                    Open {item.issueKey}
-                  </button>
-                ) : null}
-              </article>
+          <nav className="tabs" aria-label="Delivery Intelligence sections">
+            {DASHBOARD_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                className={`tab ${activeTab === tab.id ? "active" : ""}`}
+                type="button"
+                onClick={() => switchTab(tab.id)}
+              >
+                {tab.label}
+              </button>
             ))}
-          </section>
+          </nav>
 
-          <section>
-            <h2 className="section-title">Delivery Pace</h2>
-            <article className="card">
-              <div className="pace-grid">
-                <div>
-                  <div className="kicker">Elapsed</div>
-                  <div className="n">
-                    {formatMetric(snapshot.sprintPace?.elapsedPercent, "%")}
-                  </div>
-                </div>
-                <div>
-                  <div className="kicker">Completed</div>
-                  <div className="n">
-                    {formatMetric(snapshot.sprintPace?.completedPercent, "%")}
-                  </div>
-                </div>
-                <div>
-                  <div className="kicker">Pacing</div>
-                  <div className="n">
-                    {(snapshot.sprintPace?.pacingState || "unavailable").replace(/_/g, " ")}
-                  </div>
-                </div>
-                <div>
-                  <div className="kicker">Basis</div>
-                  <div className="n">
-                    {(snapshot.sprintPace?.measurementBasis || "issues").replace(/_/g, " ")}
-                  </div>
-                </div>
-              </div>
-              <p className="note">
-                {snapshot.sprintPace?.note ||
-                  "Transparent pacing assessment — not an advanced forecast."}
-              </p>
-            </article>
-            {(snapshot.deliveryPace?.signals || []).slice(0, 6).map((signal) => (
-              <article className="anomaly" key={signal.id}>
-                <div className="anomaly-head">
-                  <span
-                    className={`pill ${
-                      signal.severity === "high" || signal.severity === "critical" ? "bad" : ""
-                    }`}
-                  >
-                    {signal.severity || "review"}
-                  </span>
-                  <strong>{String(signal.id || "pace").replace(/_/g, " ")}</strong>
-                </div>
-                <p className="sub">{signal.explanation}</p>
-              </article>
-            ))}
-          </section>
-
-          <section>
-            <h2 className="section-title">Scope and Risk</h2>
-            <article className="card scope-card">
-              <p className="sub scope-intro">
-                Original commitment versus work added after the sprint started.
-                Growth is added after start divided by original commitment, not
-                current total.
-              </p>
-              <div className="scope-grid">
-                <button
-                  className={`scope-stat ${drilldown === "original" ? "active" : ""}`}
-                  type="button"
-                  onClick={() => showDrilldown("original")}
-                >
-                  <div className="n">{formatMetric(snapshot.originalCommittedCount)}</div>
-                  <div className="l">Original commitment</div>
-                </button>
-                <button
-                  className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
-                  type="button"
-                  onClick={() => showDrilldown("added")}
-                >
-                  <div className="n">{formatMetric(snapshot.addedIssueCount)}</div>
-                  <div className="l">Added after start</div>
-                </button>
-                <button
-                  className={`scope-stat ${drilldown === "completion" ? "active" : ""}`}
-                  type="button"
-                  onClick={() => showDrilldown("completion")}
-                >
-                  <div className="n">{formatMetric(snapshot.currentIssueCount)}</div>
-                  <div className="l">Current scope</div>
-                </button>
-                <button
-                  className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
-                  type="button"
-                  onClick={() => showDrilldown("added")}
-                >
-                  <div className="n">{formatSigned(snapshot.scopeChangePercent, "%")}</div>
-                  <div className="l">Scope growth</div>
-                </button>
-              </div>
-              <p className="note">
-                Removed / De-scoped is unavailable. Reliable removal history is
-                not available yet, so net change is not shown.
-              </p>
-              <div className="btn-row">
-                <button
-                  className="btn"
-                  type="button"
-                  onClick={() => showDrilldown("original")}
-                >
-                  View original commitment
-                </button>
-                <button
-                  className="btn primary"
-                  type="button"
-                  onClick={() => showDrilldown("added")}
-                >
-                  View added issues
-                </button>
-              </div>
-            </article>
-            {["original", "added"].includes(drilldown) ? renderDrilldown(drilldown) : null}
-            {navMessage && ["original", "added"].includes(drilldown) ? (
-              <p className="note">{navMessage}</p>
-            ) : null}
-
-            <h3 className="section-title">Compound risks</h3>
-            {(snapshot.compoundRisks?.items || []).length === 0 ? (
+          {activeTab === "overview" ? (
+            <section className="overview-grid">
               <article className="card">
-                <p className="sub">No compound per-issue risks were consolidated.</p>
-              </article>
-            ) : (
-              (snapshot.compoundRisks?.items || []).slice(0, 8).map((item) => (
-                <article className="anomaly" key={item.issueKey}>
-                  <div className="anomaly-head">
-                    <span
-                      className={`pill ${
-                        item.attentionLevel === "high" || item.attentionLevel === "critical"
-                          ? "bad"
-                          : ""
-                      }`}
-                    >
-                      {item.attentionLevel}
-                    </span>
-                    <strong>{item.issueKey}</strong>
-                  </div>
-                  <p className="sub">{item.summary}</p>
-                  <p className="note">{(item.riskCodes || []).join(", ")}</p>
-                  <button className="btn" type="button" onClick={() => openIssue(item.issueKey)}>
-                    Open {item.issueKey}
-                  </button>
-                </article>
-              ))
-            )}
-          </section>
-
-          <section>
-            <h2 className="section-title">Coach&apos;s Attention</h2>
-            {(snapshot.coachingInterventions || []).length === 0 ? (
-              <article className="card">
-                <p className="sub">No coaching interventions were generated.</p>
-              </article>
-            ) : (
-              snapshot.coachingInterventions.map((item) => (
-                <article className="anomaly coaching" key={item.id}>
-                  <div className="anomaly-head">
-                    <span
-                      className={`pill ${
-                        item.attentionLevel === "high" || item.attentionLevel === "critical"
-                          ? "bad"
-                          : ""
-                      }`}
-                    >
-                      {item.attentionLevel}
-                    </span>
-                    <strong>{item.title}</strong>
-                  </div>
-                  <p className="note">
-                    <strong>Evidence:</strong> {item.evidence}
-                  </p>
-                  <p className="sub">
-                    <strong>Interpretation:</strong> {item.interpretation}
-                  </p>
-                  <p className="sub">
-                    <strong>Suggested intervention:</strong> {item.suggestedIntervention}
-                  </p>
-                  {item.limitation ? <p className="note">{item.limitation}</p> : null}
-                </article>
-              ))
-            )}
-          </section>
-
-          <section>
-            <h2 className="section-title">Learning Across Sprints</h2>
-            <article className="card">
-              <div className="kicker">Current sprint vs previous sprint</div>
-              {snapshot.comparison?.capability?.status === "unavailable" ||
-              !snapshot.comparison?.rows?.length ? (
-                <p className="sub">
-                  {snapshot.comparison?.capability?.reason ||
-                    "Previous sprint comparison is unavailable."}
-                </p>
-              ) : (
-                <>
-                  <p className="sub">
-                    {snapshot.sprint?.name || "Current sprint"} vs{" "}
-                    {snapshot.comparison.previousSprint?.name || "previous sprint"}
-                    {snapshot.comparison.capability.status === "partial"
-                      ? " · Partial historical data"
-                      : ""}
-                  </p>
-                  {snapshot.comparison.capability.status === "partial" ? (
-                    <p className="note">{snapshot.comparison.capability.reason}</p>
-                  ) : null}
-                  <div className="compare-list">
-                    {snapshot.comparison.rows.map((row) => (
-                      <div className="compare-row" key={row.key}>
-                        <div className="compare-label">{row.label}</div>
-                        <div className="compare-values">
-                          {formatMetric(
-                            row.current,
-                            row.key.includes("Percent") || row.key === "healthScore"
-                              ? row.key === "healthScore"
-                                ? ""
-                                : "%"
-                              : "",
-                          )}{" "}
-                          vs{" "}
-                          {formatMetric(
-                            row.previous,
-                            row.key.includes("Percent") || row.key === "healthScore"
-                              ? row.key === "healthScore"
-                                ? ""
-                                : "%"
-                              : "",
-                          )}
-                        </div>
-                        <div className="compare-delta">
-                          <span className={`pill ${directionClass(row.direction)}`}>
-                            {directionLabel(row.direction)}
-                          </span>
-                          <span className="sub">
-                            {row.delta == null
-                              ? "—"
-                              : formatSigned(
-                                  row.delta,
-                                  row.key === "healthScore" || row.key.includes("Percent")
-                                    ? " points"
-                                    : "",
-                                )}
-                          </span>
-                        </div>
-                      </div>
+                <div className="card-head">
+                  <h3>Coach&apos;s Attention</h3>
+                </div>
+                <p className="sub card-intro">Top items that need your attention</p>
+                {overviewCoachItems.length === 0 ? (
+                  <p className="sub">No ranked attention items were detected from the current sprint data.</p>
+                ) : (
+                  <div className="grouped-list">
+                    {overviewCoachItems.map((item) => (
+                      <AttentionRow
+                        key={item.id}
+                        item={item}
+                        active={drilldown === item.drillId}
+                        onOpen={showDrilldown}
+                      />
                     ))}
                   </div>
-                </>
-              )}
-            </article>
+                )}
+                <button
+                  className="text-link"
+                  type="button"
+                  onClick={() => showDrilldown("findings")}
+                >
+                  View all {findingsTotal} finding{findingsTotal === 1 ? "" : "s"}
+                </button>
+              </article>
 
-            <h3 className="section-title">Historical patterns</h3>
-            {(snapshot.historicalPatterns?.patterns || []).length === 0 ? (
               <article className="card">
+                <div className="card-head">
+                  <h3>Sprint Readiness</h3>
+                  <span className={`pill ${readinessTone(snapshot.readiness?.assessment)}`}>
+                    {snapshot.readiness?.assessment || "Partial data"}
+                  </span>
+                </div>
                 <p className="sub">
-                  {snapshot.historicalPatterns?.capability?.reason ||
-                    "No multi-sprint patterns were detected yet."}
+                  {snapshot.readiness?.sprintGoalPolicy?.affectsReadiness === false
+                    ? "Sprint goal does not affect readiness"
+                    : "Readiness uses issue fields and deterministic heuristics."}
                 </p>
-              </article>
-            ) : (
-              snapshot.historicalPatterns.patterns.map((pattern) => (
-                <article className="anomaly" key={pattern.id}>
-                  <div className="anomaly-head">
-                    <span className="pill">{pattern.attentionLevel}</span>
-                    <strong>{pattern.title}</strong>
+                <div className="progress-row">
+                  <div className="progress-track" aria-hidden="true">
+                    <div className="progress-fill" style={{ width: `${healthPercent}%` }} />
                   </div>
-                  <p className="note">Evidence: {pattern.evidence}</p>
-                  <p className="sub">{pattern.interpretation}</p>
-                  <p className="note">Focus: {pattern.suggestedFocus}</p>
-                </article>
-              ))
-            )}
-
-            {(snapshot.retrospectiveQuestions || []).length > 0 ? (
-              <article className="card">
-                <div className="kicker">Retrospective questions</div>
-                <ul className="question-list">
-                  {snapshot.retrospectiveQuestions.map((question) => (
-                    <li key={question}>{question}</li>
+                  <span className="progress-label">
+                    {formatMetric(snapshot.healthScore)} / {snapshot.healthMax || 100}
+                  </span>
+                </div>
+                <div className="count-grid">
+                  {readinessCounts.map((row) => (
+                    <button
+                      key={row.key}
+                      className={`count-chip ${drilldown === row.drillId ? "active" : ""}`}
+                      type="button"
+                      onClick={() => showDrilldown(row.drillId)}
+                    >
+                      <strong>{row.count}</strong>
+                      <span>{row.label}</span>
+                    </button>
                   ))}
-                </ul>
+                </div>
+                <p className="note">Improve issue quality to improve delivery predictability.</p>
+                <button className="btn" type="button" onClick={() => switchTab("readiness")}>
+                  Review readiness
+                </button>
               </article>
-            ) : null}
-          </section>
+
+              <article className="card compact-scope">
+                <div className="card-head">
+                  <h3>Scope Movement</h3>
+                </div>
+                <p className="sub card-intro">Change in scope since sprint start</p>
+                <div className="scope-equation">
+                  <button
+                    className={`scope-stat ${drilldown === "original" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => showDrilldown("original")}
+                  >
+                    <div className="n">{formatMetric(snapshot.originalCommittedCount)}</div>
+                    <div className="l">Original commitment</div>
+                  </button>
+                  <span className="scope-op" aria-hidden="true">+</span>
+                  <button
+                    className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => showDrilldown("added")}
+                  >
+                    <div className="n">{formatMetric(snapshot.addedIssueCount)}</div>
+                    <div className="l">Added after start</div>
+                  </button>
+                  <span className="scope-op" aria-hidden="true">=</span>
+                  <button
+                    className={`scope-stat ${drilldown === "completion" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => showDrilldown("completion")}
+                  >
+                    <div className="n">{formatMetric(snapshot.currentIssueCount)}</div>
+                    <div className="l">Current scope</div>
+                  </button>
+                  <button
+                    className={`scope-stat growth ${drilldown === "added" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => showDrilldown("added")}
+                  >
+                    <div className="n">{formatSigned(snapshot.scopeChangePercent, "%")}</div>
+                    <div className="l">Scope growth</div>
+                  </button>
+                </div>
+              </article>
+
+              <article className="card">
+                <div className="card-head">
+                  <h3>Delivery Pace</h3>
+                  <span className={`pill ${sprintEnded ? "bad" : ""}`}>
+                    {paceHeadline(snapshot.sprintPace, snapshot.sprint)}
+                  </span>
+                </div>
+                <div className="pace-summary">
+                  <div>
+                    <div className="n">{formatMetric(snapshot.sprintPace?.completedPercent, "%")}</div>
+                    <div className="l">Completed</div>
+                  </div>
+                  <div>
+                    <div className="n">
+                      {formatMetric(snapshot.deliveryPace?.workStateCounts?.notStarted)}
+                    </div>
+                    <div className="l">Not started</div>
+                  </div>
+                  <div>
+                    <div className="n">
+                      {formatMetric(snapshot.deliveryPace?.workStateCounts?.inProgress)}
+                    </div>
+                    <div className="l">In progress</div>
+                  </div>
+                </div>
+                <p className="sub">{paceSummaryCopy(snapshot.sprintPace, snapshot.sprint)}</p>
+                <button className="btn" type="button" onClick={() => showDrilldown("completion")}>
+                  View sprint issues
+                </button>
+              </article>
+
+              <article className="card">
+                <div className="card-head">
+                  <h3>Learning Across Sprints</h3>
+                </div>
+                <p className="sub">{learningInsight.summary}</p>
+                <button className="btn" type="button" onClick={() => switchTab("learning")}>
+                  View learning
+                </button>
+              </article>
+
+              {renderBriefBuilder(true)}
+            </section>
+          ) : null}
+
+          {activeTab === "readiness" ? (
+            <section>
+              <article className="card">
+                <div className="card-head">
+                  <h3>Sprint Readiness</h3>
+                  <span className={`pill ${readinessTone(snapshot.readiness?.assessment)}`}>
+                    {snapshot.readiness?.assessment || "Partial data"}
+                  </span>
+                </div>
+                <p className="sub">
+                  {snapshot.readiness?.sprintGoalPolicy?.affectsReadiness === false
+                    ? "Sprint goal does not affect readiness"
+                    : "Readiness uses issue fields and deterministic heuristics."}
+                </p>
+                <div className="count-grid">
+                  {readinessCounts.map((row) => (
+                    <button
+                      key={row.key}
+                      className={`count-chip ${drilldown === row.drillId ? "active" : ""}`}
+                      type="button"
+                      onClick={() => showDrilldown(row.drillId)}
+                    >
+                      <strong>{row.count}</strong>
+                      <span>{row.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </article>
+              {readinessGroups.length === 0 ? (
+                <article className="card">
+                  <p className="sub">No readiness findings were grouped for this sprint.</p>
+                </article>
+              ) : (
+                <div className="grouped-list stacked">
+                  {readinessGroups.map((group) => (
+                    <AttentionRow
+                      key={group.id}
+                      item={{
+                        ...group,
+                        summary: `${group.count} issue${group.count === 1 ? "" : "s"} · ${
+                          group.explanation || "Open the drill-down to review affected issues."
+                        }`,
+                        drillId: group.id,
+                      }}
+                      active={drilldown === group.id}
+                      onOpen={showDrilldown}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {activeTab === "pace" ? (
+            <section>
+              <article className="card">
+                <div className="card-head">
+                  <h3>Delivery Pace</h3>
+                  <span className={`pill ${sprintEnded ? "bad" : ""}`}>
+                    {paceHeadline(snapshot.sprintPace, snapshot.sprint)}
+                  </span>
+                </div>
+                <div className="pace-grid">
+                  <div>
+                    <div className="kicker">Elapsed</div>
+                    <div className="n">{formatMetric(snapshot.sprintPace?.elapsedPercent, "%")}</div>
+                  </div>
+                  <div>
+                    <div className="kicker">Completed</div>
+                    <div className="n">{formatMetric(snapshot.sprintPace?.completedPercent, "%")}</div>
+                  </div>
+                  <div>
+                    <div className="kicker">Not started</div>
+                    <div className="n">
+                      {formatMetric(snapshot.deliveryPace?.workStateCounts?.notStarted)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="kicker">In progress</div>
+                    <div className="n">
+                      {formatMetric(snapshot.deliveryPace?.workStateCounts?.inProgress)}
+                    </div>
+                  </div>
+                </div>
+                <p className="sub">{paceSummaryCopy(snapshot.sprintPace, snapshot.sprint)}</p>
+                <p className="note">
+                  {sprintEnded
+                    ? "Pacing is shown as a closed-sprint result, not an active forecast."
+                    : snapshot.sprintPace?.note ||
+                      "Transparent pacing assessment — not an advanced forecast."}
+                </p>
+                <button className="btn" type="button" onClick={() => showDrilldown("completion")}>
+                  View sprint issues
+                </button>
+              </article>
+              {paceGroups.length === 0 ? (
+                <article className="card">
+                  <p className="sub">No delivery-pace signals were grouped for this sprint.</p>
+                </article>
+              ) : (
+                <div className="grouped-list stacked">
+                  {paceGroups.map((group) => (
+                    <AttentionRow
+                      key={group.id}
+                      item={{
+                        ...group,
+                        summary:
+                          group.issueKeys.length > 0
+                            ? `${group.issueKeys.length} issue${
+                                group.issueKeys.length === 1 ? "" : "s"
+                              } · ${group.explanation}`
+                            : group.explanation,
+                        drillId: group.id,
+                      }}
+                      active={drilldown === group.id}
+                      onOpen={showDrilldown}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {activeTab === "scope" ? (
+            <section>
+              <article className="card scope-card">
+                <div className="card-head">
+                  <h3>Scope Movement</h3>
+                </div>
+                <p className="sub scope-intro">
+                  Original commitment versus work added after the sprint started.
+                  Growth is added after start divided by original commitment, not
+                  current total.
+                </p>
+                <div className="scope-equation">
+                  <button
+                    className={`scope-stat ${drilldown === "original" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => showDrilldown("original")}
+                  >
+                    <div className="n">{formatMetric(snapshot.originalCommittedCount)}</div>
+                    <div className="l">Original commitment</div>
+                  </button>
+                  <span className="scope-op" aria-hidden="true">+</span>
+                  <button
+                    className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => showDrilldown("added")}
+                  >
+                    <div className="n">{formatMetric(snapshot.addedIssueCount)}</div>
+                    <div className="l">Added after start</div>
+                  </button>
+                  <span className="scope-op" aria-hidden="true">=</span>
+                  <button
+                    className={`scope-stat ${drilldown === "completion" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => showDrilldown("completion")}
+                  >
+                    <div className="n">{formatMetric(snapshot.currentIssueCount)}</div>
+                    <div className="l">Current scope</div>
+                  </button>
+                  <button
+                    className={`scope-stat growth ${drilldown === "added" ? "active" : ""}`}
+                    type="button"
+                    onClick={() => showDrilldown("added")}
+                  >
+                    <div className="n">{formatSigned(snapshot.scopeChangePercent, "%")}</div>
+                    <div className="l">Scope growth</div>
+                  </button>
+                </div>
+                <p className="note">
+                  Removed / De-scoped is unavailable. Reliable removal history is
+                  not available yet, so net change is not shown.
+                </p>
+                <div className="btn-row">
+                  <button className="btn" type="button" onClick={() => showDrilldown("original")}>
+                    View original commitment
+                  </button>
+                  <button className="btn primary" type="button" onClick={() => showDrilldown("added")}>
+                    View added issues
+                  </button>
+                </div>
+              </article>
+
+              <h3 className="section-title">Compound risks</h3>
+              {(snapshot.compoundRisks?.items || []).length === 0 ? (
+                <article className="card">
+                  <p className="sub">No compound per-issue risks were consolidated.</p>
+                </article>
+              ) : (
+                <div className="grouped-list stacked">
+                  {(snapshot.compoundRisks?.items || []).map((item) => (
+                    <AttentionRow
+                      key={item.issueKey}
+                      item={{
+                        severity: item.attentionLevel,
+                        title: item.issueKey,
+                        summary: item.summary,
+                        suggestedAction: `Open ${item.issueKey}`,
+                        drillId: item.issueKey,
+                      }}
+                      active={false}
+                      onOpen={() => openIssue(item.issueKey)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {activeTab === "learning" ? (
+            <section>
+              <article className="card">
+                <div className="kicker">Current sprint vs previous sprint</div>
+                {snapshot.comparison?.capability?.status === "unavailable" ||
+                !snapshot.comparison?.rows?.length ? (
+                  <p className="sub">
+                    {snapshot.comparison?.capability?.reason ||
+                      "Previous sprint comparison is unavailable."}
+                  </p>
+                ) : (
+                  <>
+                    <p className="sub">
+                      {snapshot.sprint?.name || "Current sprint"} vs{" "}
+                      {snapshot.comparison.previousSprint?.name || "previous sprint"}
+                      {snapshot.comparison.capability.status === "partial"
+                        ? " · Partial historical data"
+                        : ""}
+                    </p>
+                    {snapshot.comparison.capability.status === "partial" ? (
+                      <p className="note">{snapshot.comparison.capability.reason}</p>
+                    ) : null}
+                    <div className="compare-list">
+                      {snapshot.comparison.rows.map((row) => (
+                        <div className="compare-row" key={row.key}>
+                          <div className="compare-label">{row.label}</div>
+                          <div className="compare-values">
+                            {formatMetric(
+                              row.current,
+                              row.key.includes("Percent") || row.key === "healthScore"
+                                ? row.key === "healthScore"
+                                  ? ""
+                                  : "%"
+                                : "",
+                            )}{" "}
+                            vs{" "}
+                            {formatMetric(
+                              row.previous,
+                              row.key.includes("Percent") || row.key === "healthScore"
+                                ? row.key === "healthScore"
+                                  ? ""
+                                  : "%"
+                                : "",
+                            )}
+                          </div>
+                          <div className="compare-delta">
+                            <span className={`pill ${directionClass(row.direction)}`}>
+                              {directionLabel(row.direction)}
+                            </span>
+                            <span className="sub">
+                              {row.delta == null
+                                ? "—"
+                                : formatSigned(
+                                    row.delta,
+                                    row.key === "healthScore" || row.key.includes("Percent")
+                                      ? " points"
+                                      : "",
+                                  )}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </article>
+
+              <h3 className="section-title">Historical patterns</h3>
+              {(snapshot.historicalPatterns?.patterns || []).length === 0 ? (
+                <article className="card">
+                  <p className="sub">
+                    {snapshot.historicalPatterns?.capability?.reason ||
+                      "No multi-sprint patterns were detected yet."}
+                  </p>
+                </article>
+              ) : (
+                <div className="grouped-list stacked">
+                  {snapshot.historicalPatterns.patterns.map((pattern) => (
+                    <article className="attention-row" key={pattern.id}>
+                      <div className="attention-copy">
+                        <div className="attention-head">
+                          <span className="pill">{attentionLevelLabel(pattern.attentionLevel)}</span>
+                          <strong>{pattern.title}</strong>
+                        </div>
+                        <p className="note">Evidence: {pattern.evidence}</p>
+                        <p className="sub">{pattern.interpretation}</p>
+                        <p className="note">Focus: {pattern.suggestedFocus}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              {(snapshot.retrospectiveQuestions || []).length > 0 ? (
+                <article className="card">
+                  <div className="kicker">Retrospective questions</div>
+                  <ul className="question-list">
+                    {snapshot.retrospectiveQuestions.map((question) => (
+                      <li key={question}>{question}</li>
+                    ))}
+                  </ul>
+                </article>
+              ) : null}
+            </section>
+          ) : null}
+
+          {activeTab === "briefs" ? renderBriefBuilder(false) : null}
+
+          {renderDrilldown(drilldown)}
+          {navMessage ? <p className="note">{navMessage}</p> : null}
         </>
       )}
-
-      <section className="ai-panel card">
-        <div className="kicker">Brief Builder / AI Actions</div>
-        <p className="sub">
-          Briefs are deterministic. Rovo is user-triggered only and never runs on
-          load or refresh.
-        </p>
-        <div className="btn-row">
-          <button
-            className={`btn ${briefKind === "team" ? "primary" : ""}`}
-            type="button"
-            onClick={() => setBriefKind("team")}
-          >
-            Team update
-          </button>
-          <button
-            className={`btn ${briefKind === "leadership" ? "primary" : ""}`}
-            type="button"
-            onClick={() => setBriefKind("leadership")}
-          >
-            Leadership brief
-          </button>
-          <button
-            className={`btn ${briefKind === "retro" ? "primary" : ""}`}
-            type="button"
-            onClick={() => setBriefKind("retro")}
-          >
-            Retro summary
-          </button>
-        </div>
-        {selectedBrief ? (
-          <pre className="brief-preview">{selectedBrief.plain}</pre>
-        ) : (
-          <p className="sub">Briefs appear once an active sprint snapshot is available.</p>
-        )}
-        <div className="btn-row">
-          <button
-            className="btn"
-            type="button"
-            disabled={!selectedBrief}
-            onClick={() => copyBrief(false)}
-          >
-            Copy
-          </button>
-          <button
-            className="btn"
-            type="button"
-            disabled={!selectedBrief}
-            onClick={() => copyBrief(true)}
-          >
-            Copy markdown
-          </button>
-          <button
-            className="btn primary"
-            type="button"
-            disabled={!selectedBrief || !snapshot?.sprint}
-            onClick={openBriefInRovo}
-          >
-            Open in Rovo
-          </button>
-        </div>
-        {copyMessage ? <p className="note">{copyMessage}</p> : null}
-        <div className="btn-row" style={{ marginTop: 12 }}>
-          <button
-            className="btn"
-            type="button"
-            disabled={!snapshot?.sprint}
-            onClick={() => openRovo(ROVO_INTENTS.explain)}
-          >
-            Explain sprint
-          </button>
-          <button
-            className="btn"
-            type="button"
-            disabled={!snapshot?.sprint}
-            onClick={() => openRovo(ROVO_INTENTS.recommend)}
-          >
-            Recommend actions
-          </button>
-          <button
-            className="btn"
-            type="button"
-            disabled={!snapshot?.sprint}
-            onClick={() => openRovo(ROVO_INTENTS.brief)}
-          >
-            Generate leadership brief
-          </button>
-        </div>
-        {rovoEnabled === false ? (
-          <p className="note">
-            Atlassian Rovo is not enabled on this site. Deterministic metrics
-            remain available; AI explanations require Rovo on a paid Jira plan.
-          </p>
-        ) : null}
-        {aiMessage ? <p className="note">{aiMessage}</p> : null}
-      </section>
     </div>
   );
 }
