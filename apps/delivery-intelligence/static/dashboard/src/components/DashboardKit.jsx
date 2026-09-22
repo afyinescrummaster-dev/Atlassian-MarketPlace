@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { attentionLevelLabel } from "../dashboard-ia.js";
 
 export const StatusPill = ({ tone = "", children }) => (
@@ -72,10 +73,17 @@ export const IssueTable = ({
   selectedKey,
   onSelect,
   footer,
+  pageSize = 0,
 }) => {
+  const rowSignature = `${rows?.length || 0}:${rows?.[0]?.key || ""}`;
+  const [paging, setPaging] = useState({ signature: rowSignature, page: 1 });
+  const page = paging.signature === rowSignature ? paging.page : 1;
+  const setPage = (next) => setPaging({ signature: rowSignature, page: next });
   if (!rows?.length) {
     return <p className="sub">{empty || "No issues match this view."}</p>;
   }
+  const totalPages = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
+  const shown = pageSize ? rows.slice((page - 1) * pageSize, page * pageSize) : rows;
   return (
     <div className="table-wrap">
       <table className="data-table">
@@ -87,7 +95,7 @@ export const IssueTable = ({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {shown.map((row) => (
             <tr
               key={row.key}
               className={selectedKey === row.key ? "selected" : ""}
@@ -107,6 +115,26 @@ export const IssueTable = ({
           ))}
         </tbody>
       </table>
+      {pageSize ? (
+        <div className="pager">
+          <span>
+            {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, rows.length)} of {rows.length}
+          </span>
+          <div className="btn-row">
+            <button className="btn" type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              Previous
+            </button>
+            <button
+              className="btn"
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      ) : null}
       {footer}
     </div>
   );
@@ -121,28 +149,29 @@ export const EvidenceDrawer = ({
   onAskRovo,
   canOpenJira,
   canAskRovo,
+  variant = "rail",
 }) => {
   if (!title) {
     return (
-      <aside className="drawer empty-drawer">
+      <aside className={`drawer empty-drawer ${variant}`}>
         <p className="sub">Select an issue to see evidence, confidence, and suggested conversation.</p>
       </aside>
     );
   }
   return (
-    <aside className="drawer" aria-label="Issue evidence">
+    <aside className={`drawer ${variant}`} aria-label="Issue evidence">
       <div className="drawer-head">
         <div>
           <strong>{title}</strong>
           {meta ? <div className="sub">{meta}</div> : null}
         </div>
         {onClose ? (
-          <button className="btn" type="button" onClick={onClose} aria-label="Close details">
-            Close
+          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close details">
+            ×
           </button>
         ) : null}
       </div>
-      {children}
+      <div className="drawer-body">{children}</div>
       <div className="btn-row drawer-actions">
         <button className="btn" type="button" disabled={!canOpenJira} onClick={onOpenJira}>
           Open in Jira
@@ -160,32 +189,45 @@ export const MetricCompare = ({ rows, formatValue, formatDelta }) => {
     return <p className="sub">Comparison data is unavailable for this sprint.</p>;
   }
   return (
-    <div className="compare-list">
-      {rows.map((row) => (
-        <div className="compare-row" key={row.key}>
-          <div className="compare-label">{row.label}</div>
-          <div className="compare-values">
-            {formatValue(row)} vs {formatValue(row, "previous")}
-          </div>
-          <div className="compare-delta">
-            <StatusPill
-              tone={
-                row.direction === "improved" ? "good" : row.direction === "deteriorated" ? "bad" : ""
-              }
-            >
-              {row.direction === "improved"
-                ? "Improved"
-                : row.direction === "deteriorated"
-                  ? "Worse"
-                  : row.direction === "unchanged"
-                    ? "Unchanged"
-                    : "Unavailable"}
-            </StatusPill>
-            <span className="sub">{formatDelta(row)}</span>
-          </div>
-        </div>
-      ))}
-    </div>
+    <table className="data-table compare-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Current</th>
+          <th>Previous</th>
+          <th>Change</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.key}>
+            <td>{row.label}</td>
+            <td>{formatValue(row)}</td>
+            <td>{formatValue(row, "previous")}</td>
+            <td>
+              <StatusPill
+                tone={
+                  row.direction === "improved"
+                    ? "good"
+                    : row.direction === "deteriorated"
+                      ? "bad"
+                      : ""
+                }
+              >
+                {row.direction === "improved"
+                  ? "Improved"
+                  : row.direction === "deteriorated"
+                    ? "Worse"
+                    : row.direction === "unchanged"
+                      ? "Unchanged"
+                      : "Unavailable"}
+              </StatusPill>
+              <span className="sub"> {formatDelta(row)}</span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 };
 
@@ -233,13 +275,11 @@ export const DimensionMeters = ({ items }) => (
   <div className="dimension-grid">
     {items.map((item) => (
       <div key={item.id} className="dimension">
-        <div className="dimension-top">
-          <span>{item.label}</span>
-          <strong>{item.score == null ? "—" : `${item.score}/100`}</strong>
-        </div>
+        <strong>{item.score == null ? "—" : `${item.score}/100`}</strong>
         <div className="progress-track">
           <div className="progress-fill calm" style={{ width: `${item.score || 0}%` }} />
         </div>
+        <span>{item.label}</span>
       </div>
     ))}
   </div>
@@ -249,22 +289,89 @@ export const FlowTrack = ({ notStarted, inProgress, done }) => {
   const total = Math.max(1, notStarted + inProgress + done);
   return (
     <div className="flow-track" aria-label="Work flow">
-      <div className="flow-seg new" style={{ flexGrow: notStarted || 0.2 }}>
-        <strong>{notStarted}</strong>
-        <span>Not started</span>
+      <div className="flow-bar">
+        <div className="flow-seg new" style={{ width: `${(notStarted / total) * 100}%` }} />
+        <div className="flow-seg wip" style={{ width: `${(inProgress / total) * 100}%` }} />
+        <div className="flow-seg done" style={{ width: `${(done / total) * 100}%` }} />
       </div>
-      <div className="flow-seg wip" style={{ flexGrow: inProgress || 0.2 }}>
-        <strong>{inProgress}</strong>
-        <span>In progress</span>
+      <div className="flow-legend">
+        <span>
+          <strong>{notStarted}</strong> Not started
+        </span>
+        <span>
+          <strong>{inProgress}</strong> In progress
+        </span>
+        <span>
+          <strong>{done}</strong> Done
+        </span>
       </div>
-      <div className="flow-seg done" style={{ flexGrow: done || 0.2 }}>
-        <strong>{done}</strong>
-        <span>Done</span>
-      </div>
-      <span className="visually-hidden">
-        {notStarted} not started, {inProgress} in progress, {done} done of {total} issues
-      </span>
     </div>
+  );
+};
+
+export const ScopeLine = ({ points }) => {
+  const series = points || [];
+  if (series.length === 0) {
+    return <p className="sub">Scope movement is unavailable.</p>;
+  }
+  const width = 560;
+  const height = 140;
+  const max = Math.max(1, ...series.map((point) => point.cumulative || 0));
+  const xs = series.map(
+    (_, index) => 16 + (index / Math.max(series.length - 1, 1)) * (width - 32),
+  );
+  const ys = series.map((point) => height - 28 - ((point.cumulative || 0) / max) * (height - 48));
+  const path = xs
+    .map((x, index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)},${ys[index].toFixed(1)}`)
+    .join(" ");
+  return (
+    <svg className="scope-line" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Scope movement">
+      <line x1="16" y1={height - 24} x2={width - 8} y2={height - 24} stroke="#dfe1e6" />
+      <path d={path} fill="none" stroke="#0052cc" strokeWidth="2.5" />
+      {xs.map((x, index) => (
+        <g key={`${series[index].label}-${index}`}>
+          <circle cx={x} cy={ys[index]} r="4" fill="#0052cc" />
+          <text x={x} y={ys[index] - 10} textAnchor="middle" className="chart-label">
+            {series[index].added ? `+${series[index].added}` : series[index].cumulative}
+          </text>
+          <text x={x} y={height - 8} textAnchor="middle" className="chart-label muted">
+            {series[index].label === "Sprint start" ? "Start" : String(series[index].label).slice(5)}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+};
+
+export const SeriesSpark = ({ points }) => {
+  const series = points || [];
+  if (series.length < 2) {
+    return null;
+  }
+  const width = 360;
+  const height = 96;
+  const values = series.map((point) => Number(point.scopeChangePercent) || 0);
+  const max = Math.max(20, ...values);
+  const xs = series.map((_, index) => 24 + (index / Math.max(series.length - 1, 1)) * (width - 48));
+  const ys = values.map((value) => height - 28 - (value / max) * (height - 44));
+  const path = xs
+    .map((x, index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)},${ys[index].toFixed(1)}`)
+    .join(" ");
+  return (
+    <svg className="series-spark" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Reliable sprint series">
+      <path d={path} fill="none" stroke="#de350b" strokeWidth="2.5" />
+      {xs.map((x, index) => (
+        <g key={`${series[index].sprintId || series[index].sprintName}-${index}`}>
+          <circle cx={x} cy={ys[index]} r="4" fill="#de350b" />
+          <text x={x} y={ys[index] - 10} textAnchor="middle" className="chart-label">
+            {series[index].scopeChangePercent == null ? "—" : `+${series[index].scopeChangePercent}%`}
+          </text>
+          <text x={x} y={height - 8} textAnchor="middle" className="chart-label muted">
+            {series[index].isCurrent ? "Current" : series[index].sprintName}
+          </text>
+        </g>
+      ))}
+    </svg>
   );
 };
 

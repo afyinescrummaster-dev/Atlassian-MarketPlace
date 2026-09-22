@@ -7,8 +7,8 @@ import {
 } from "../dashboard-ia.js";
 import {
   EvidenceDrawer,
-  GroupedFindingRow,
   IssueTable,
+  ScopeLine,
   SectionHeader,
   SeverityPill,
 } from "../components/DashboardKit.jsx";
@@ -43,7 +43,6 @@ export default function ScopeView({
   onOpenKeys,
 }) {
   const timeline = buildScopeTimeline(snapshot);
-  const max = Math.max(1, ...timeline.points.map((point) => point.cumulative || 0));
   const [query, setQuery] = useState("");
   const rows = useMemo(
     () => filterIssueRows(addedIssueRows(snapshot, issueIndex), { query }),
@@ -62,8 +61,8 @@ export default function ScopeView({
         subtitle="Understand what changed from commitment and which issues threaten delivery."
       />
       <div className="split-hero">
-        <article className="card">
-          <div className="kicker">Scope at a glance</div>
+        <div className="panel">
+          <div className="panel-title">Scope at a glance</div>
           <div className="scope-equation">
             <div className="scope-stat">
               <div className="n">{snapshot.originalCommittedCount ?? "—"}</div>
@@ -87,9 +86,9 @@ export default function ScopeView({
             </div>
           </div>
           <p className="note">{timeline.removalsNote}</p>
-        </article>
-        <article className="card">
-          <div className="kicker">Risk summary</div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">Risk summary</div>
           <div className="count-grid four">
             <div className="count-chip">
               <strong>{snapshot.blockedCount ?? 0}</strong>
@@ -108,48 +107,42 @@ export default function ScopeView({
               <span>Dependencies</span>
             </div>
           </div>
-        </article>
+        </div>
       </div>
 
       <div className="split-hero">
-        <article className="card">
-          <div className="kicker">Scope movement over time</div>
-          <div className="timeline">
-            {timeline.points.map((point) => (
-              <div key={`${point.label}-${point.cumulative}`} className="timeline-point">
-                <div
-                  className="timeline-bar"
-                  style={{ height: `${Math.max(8, (point.cumulative / max) * 72)}px` }}
-                />
-                <strong>{point.added ? `+${point.added}` : point.cumulative}</strong>
-                <span>{point.label === "Sprint start" ? "Start" : point.label.slice(5)}</span>
-              </div>
-            ))}
-          </div>
-        </article>
-        <article className="card">
-          <div className="kicker">Compound risks</div>
+        <div className="panel">
+          <div className="panel-title">Scope movement over time</div>
+          <ScopeLine points={timeline.points} />
+        </div>
+        <div className="panel">
+          <div className="panel-title">Compound risks</div>
           {compounds.length === 0 ? (
             <p className="sub">No compound per-issue risks were consolidated.</p>
           ) : (
-            compounds.slice(0, 5).map((item) => (
-              <GroupedFindingRow
-                key={item.issueKey}
-                item={{
-                  title: item.issueKey,
-                  summary: item.summary,
-                  severity: item.attentionLevel,
-                  suggestedAction: "View issue",
-                }}
-                active={selectedKey === item.issueKey}
-                onOpen={() => setSelectedKey(item.issueKey)}
-              />
-            ))
+            <ol className="risk-list">
+              {compounds.slice(0, 5).map((item) => (
+                <li key={item.issueKey}>
+                  <button
+                    className={`risk-item ${selectedKey === item.issueKey ? "active" : ""}`}
+                    type="button"
+                    onClick={() => setSelectedKey(item.issueKey)}
+                  >
+                    <div>
+                      <strong>{item.issueKey}</strong>
+                      <SeverityPill severity={item.attentionLevel} />
+                      <p className="sub">{item.summary}</p>
+                    </div>
+                    <span className="text-link inline">View issue</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
           )}
-        </article>
+        </div>
       </div>
 
-      <article className="card">
+      <div className="panel">
         <div className="card-head">
           <h3>Added after start · {rows.length} issues</h3>
           <input
@@ -167,9 +160,10 @@ export default function ScopeView({
           onSelect={(row) => setSelectedKey(row.key)}
           empty="No issues were added after sprint start."
         />
-      </article>
+      </div>
 
       <EvidenceDrawer
+        variant="bar"
         title={
           selectedIssue
             ? `${selectedIssue.key} ${selectedIssue.summary || ""}`.trim()

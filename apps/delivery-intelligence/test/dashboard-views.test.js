@@ -164,6 +164,23 @@ test("brief modes filter preview sections without changing metrics", () => {
   assert.equal(briefFacts(snapshot)[0].value, "55/100");
 });
 
+test("detail views use the Jira product-page chrome instead of stacked cards", () => {
+  const root = dirname(fileURLToPath(import.meta.url));
+  const app = readFileSync(join(root, "../static/dashboard/src/App.jsx"), "utf8");
+  const readiness = readFileSync(join(root, "../static/dashboard/src/views/ReadinessView.jsx"), "utf8");
+  const pace = readFileSync(join(root, "../static/dashboard/src/views/PaceView.jsx"), "utf8");
+  const scope = readFileSync(join(root, "../static/dashboard/src/views/ScopeView.jsx"), "utf8");
+  const learning = readFileSync(join(root, "../static/dashboard/src/views/LearningView.jsx"), "utf8");
+  const briefs = readFileSync(join(root, "../static/dashboard/src/views/BriefsView.jsx"), "utf8");
+  assert.match(app, /className="page"/);
+  assert.match(app, /product-header/);
+  assert.match(readiness, /readiness-hero/);
+  assert.match(pace, /pace-workspace/);
+  assert.match(scope, /ScopeLine/);
+  assert.match(learning, /SeriesSpark/);
+  assert.match(briefs, /briefs-studio/);
+});
+
 test("Rovo is never auto-invoked from dashboard load", () => {
   assert.equal(ROVO_POLICY.autoInvoke, false);
   const root = dirname(fileURLToPath(import.meta.url));

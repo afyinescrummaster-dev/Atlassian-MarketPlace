@@ -57,8 +57,8 @@ export default function BriefsView({
         }
       />
 
-      <div className="triptych briefs-grid">
-        <article className="card">
+      <div className="workspace briefs-studio">
+        <aside className="panel slim">
           <div className="kicker">Brief settings</div>
           <label className="field">
             <span>Audience</span>
@@ -95,10 +95,10 @@ export default function BriefsView({
               {key === "jira" ? "Jira links" : key[0].toUpperCase() + key.slice(1)}
             </label>
           ))}
-          <p className="note">{ROVO_POLICY.note}</p>
-        </article>
+          <p className="note trust-note">{ROVO_POLICY.note}</p>
+        </aside>
 
-        <article className="card brief-preview-card">
+        <section className="panel grow brief-preview-card">
           <div className="card-head">
             <h3>{preview.title || selected?.title || "Brief preview"}</h3>
             <StatusPill tone={snapshot.healthStatus === "Needs Attention" ? "bad" : ""}>
@@ -134,30 +134,34 @@ export default function BriefsView({
               {refs.extra ? `, +${refs.extra} more` : ""}
             </p>
           ) : null}
-        </article>
+        </section>
 
         <div className="stack">
-          <article className="card">
+          <aside className="panel">
             <div className="kicker">Source & trust</div>
             <p className="sub">
               <strong>Deterministic facts included.</strong> These metrics come from Jira
               and cannot be changed by Rovo.
             </p>
-            <ul className="plain-list">
+            <ul className="plain-list check-list">
               {facts.map((fact) => (
                 <li key={fact.label}>
                   {fact.label}: {fact.value}
                 </li>
               ))}
             </ul>
-            <p className="note">
-              AI recommendations are only added when you choose Open with Rovo. Rovo may
-              improve framing and next steps, but it must not change objective metrics.
+          </aside>
+          <aside className="panel">
+            <div className="kicker">AI recommendations</div>
+            <p className="sub">
+              Added only when you choose Create with Rovo. Rovo may improve framing and
+              next steps, but it must not change objective metrics.
             </p>
-          </article>
-          <article className="card">
+            <p className="note">Partial previous-sprint data is never invented.</p>
+          </aside>
+          <aside className="panel">
             <div className="kicker">Actions</div>
-            <div className="btn-row">
+            <div className="stack tight">
               <button className="btn" type="button" disabled={!selected} onClick={() => onCopy(false)}>
                 Copy brief
               </button>
@@ -174,9 +178,13 @@ export default function BriefsView({
               </button>
             </div>
             {copyMessage ? <p className="note">{copyMessage}</p> : null}
-          </article>
+          </aside>
         </div>
       </div>
+      <p className="footnote">
+        Preview modes: Team update, Leadership brief, and Retrospective. Generated from
+        verified Delivery Intelligence data as of {generated}.
+      </p>
     </section>
   );
 }

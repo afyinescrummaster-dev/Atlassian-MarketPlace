@@ -1,4 +1,5 @@
 import {
+  attentionLevelLabel,
   capabilityState,
   pickLearningInsight,
   reliableSprintSeries,
@@ -8,8 +9,24 @@ import {
   CapabilityState,
   MetricCompare,
   SectionHeader,
+  SeriesSpark,
   StatusPill,
 } from "../components/DashboardKit.jsx";
+
+const patternDirection = (pattern) => {
+  if (
+    pattern.id === "recurring_scope_growth" ||
+    pattern.id === "recurring_blockers" ||
+    pattern.id === "recurring_carryover"
+  ) {
+    return "Recurring";
+  }
+  if (pattern.id === "completion_below_recent_average" || pattern.id === "declining_health_trend") {
+    return "Decreasing";
+  }
+  return "Observed";
+};
+
 
 const suffixFor = (key) => {
   if (key === "healthScore") {
@@ -38,6 +55,7 @@ export default function LearningView({ snapshot, onAskRovo, onCreateBrief }) {
         subtitle="Turn repeated delivery patterns into better team experiments."
         action={
           <div className="btn-row">
+            <span className="meta">Last {Math.max(series.points.length, 1)} reliable sprint{series.points.length === 1 ? "" : "s"}</span>
             <button className="btn" type="button" onClick={onCreateBrief}>
               Create retrospective brief
             </button>
@@ -56,65 +74,66 @@ export default function LearningView({ snapshot, onAskRovo, onCreateBrief }) {
         }
       />
 
-      <div className="triptych">
-        <article className="card">
-          <div className="kicker">Key insight</div>
+      <div className="learning-hero">
+        <div className="panel">
+          <div className="panel-title">Key insight</div>
           <h3>{insight.title}</h3>
           <p className="sub">{insight.summary}</p>
           <CapabilityState state={historyCap} />
-        </article>
-        <article className="card">
-          <div className="kicker">Reliable sprint series</div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">Reliable sprint series</div>
           {series.points.length < 2 ? (
             <p className="sub">
               Only the current sprint is available. Previous-sprint comparison is not invented.
             </p>
           ) : (
-            <div className="spark-row">
-              {series.points.map((point) => (
-                <div key={point.sprintId || point.sprintName} className="spark-point">
-                  <strong>
-                    {point.scopeChangePercent == null ? "—" : `${point.scopeChangePercent}%`}
-                  </strong>
-                  <span>{point.isCurrent ? "Current" : point.sprintName}</span>
-                </div>
-              ))}
-            </div>
+            <SeriesSpark points={series.points} />
           )}
-        </article>
-        <article className="card">
-          <div className="kicker">What this means</div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">What this means for your team</div>
           <p className="sub">
             Use completed sprints with reliable data only. Do not treat a short series as a
             causal claim or a forecast.
           </p>
-        </article>
+        </div>
       </div>
 
       <div className="split-hero">
-        <article className="card">
-          <div className="kicker">Patterns detected</div>
+        <div className="panel">
+          <div className="panel-title">Patterns detected</div>
           {patterns.length === 0 ? (
             <p className="sub">{historyCap.reason}</p>
           ) : (
-            <div className="grouped-list">
-              {patterns.map((pattern) => (
-                <div className="attention-row" key={pattern.id}>
-                  <div className="attention-copy">
-                    <div className="attention-head">
-                      <StatusPill>{pattern.attentionLevel}</StatusPill>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Pattern</th>
+                  <th>Evidence</th>
+                  <th>Direction</th>
+                  <th>Confidence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {patterns.map((pattern) => (
+                  <tr key={pattern.id}>
+                    <td>
                       <strong>{pattern.title}</strong>
-                    </div>
-                    <p className="sub">{pattern.evidence}</p>
-                    <p className="note">{pattern.interpretation}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </td>
+                    <td>{pattern.evidence}</td>
+                    <td>{patternDirection(pattern)}</td>
+                    <td>
+                      <StatusPill>{attentionLevelLabel(pattern.attentionLevel)}</StatusPill>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
-        </article>
-        <article className="card">
-          <div className="kicker">Sprint comparison</div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">Sprint comparison</div>
           <CapabilityState state={compareCap} />
           <MetricCompare
             rows={comparison}
@@ -135,12 +154,12 @@ export default function LearningView({ snapshot, onAskRovo, onCreateBrief }) {
                   }`
             }
           />
-        </article>
+        </div>
       </div>
 
-      <div className="triptych">
-        <article className="card">
-          <div className="kicker">Retrospective questions</div>
+      <div className="learning-hero">
+        <div className="panel">
+          <div className="panel-title">Retrospective questions</div>
           {questions.length === 0 ? (
             <p className="sub">No retrospective questions were generated.</p>
           ) : (
@@ -150,9 +169,9 @@ export default function LearningView({ snapshot, onAskRovo, onCreateBrief }) {
               ))}
             </ol>
           )}
-        </article>
-        <article className="card">
-          <div className="kicker">Suggested experiment</div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">Suggested experiment</div>
           {experiments.length === 0 ? (
             <p className="sub">No historical pattern is complete enough to suggest an experiment.</p>
           ) : (
@@ -164,14 +183,14 @@ export default function LearningView({ snapshot, onAskRovo, onCreateBrief }) {
               </div>
             ))
           )}
-        </article>
-        <article className="card">
-          <div className="kicker">Learning history</div>
+        </div>
+        <div className="panel">
+          <div className="panel-title">Learning history</div>
           <p className="sub">
             Past experiment outcomes are not stored yet, so this panel stays empty rather than
             inventing results.
           </p>
-        </article>
+        </div>
       </div>
     </section>
   );

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   DASHBOARD_TABS,
+  READINESS_NAV_LABELS,
   allFindingsCount,
   attentionLevelLabel,
   buildCoachAttentionItems,
@@ -96,6 +97,11 @@ const fixtureSnapshot = {
     ],
   },
 };
+
+test("readiness navigation uses short labels instead of one card per issue", () => {
+  assert.equal(READINESS_NAV_LABELS.acceptance_criteria_not_detected, "AC not detected");
+  assert.equal(READINESS_NAV_LABELS.stale_at_sprint_start, "Stale at start");
+});
 
 test("dashboard tabs match the requested information architecture", () => {
   assert.deepEqual(

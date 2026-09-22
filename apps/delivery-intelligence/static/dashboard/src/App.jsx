@@ -34,7 +34,7 @@ import "./App.css";
 
 const AGENT_KEY = "delivery-intelligence-agent";
 const AGENT_NAME = "Delivery Intelligence";
-const UI_BUILD = "2.12.0";
+const UI_BUILD = "2.12.1";
 
 const BRIEF_KEYS = {
   team: "teamUpdate",
@@ -822,29 +822,37 @@ export default function App() {
   );
 
   return (
-    <div className="shell">
-      <header className="header">
-        <div>
-          <h1>Delivery Intelligence</h1>
-          <div className="meta">
-            {contextLine}
-            {contextLine ? " · " : ""}
-            Build {UI_BUILD}
-          </div>
-        </div>
-        <div className="header-aside">
-          {snapshot?.generatedAt ? (
-            <div className="meta">
-              Last updated {new Date(snapshot.generatedAt).toLocaleString()}
+    <div className="page" data-ui-build={UI_BUILD}>
+      <header className="product-header">
+        <div className="product-header-top">
+          <div className="brand">
+            <div className="brand-mark" aria-hidden="true">DI</div>
+            <div>
+              <h1>
+                Delivery Intelligence <span className="lozenge">Dev</span>
+              </h1>
+              <p className="brand-sub">
+                Turn sprint data into clarity, action and better outcomes.
+              </p>
             </div>
-          ) : null}
-          <div className="btn-row">
-            <button
-              className="btn"
-              type="button"
-              disabled={refreshing}
-              onClick={refresh}
-            >
+          </div>
+          <div className="product-context">
+            {snapshot?.sprint ? (
+              <>
+                <span>Sprint: {snapshot.sprint.name}</span>
+                {sprintEnded ? (
+                  <span className="pill bad">Sprint end date passed</span>
+                ) : null}
+              </>
+            ) : (
+              <span>{contextLine || "No active sprint"}</span>
+            )}
+            {snapshot?.generatedAt ? (
+              <span className="meta">
+                Last updated {new Date(snapshot.generatedAt).toLocaleString()}
+              </span>
+            ) : null}
+            <button className="btn" type="button" disabled={refreshing} onClick={refresh}>
               {refreshing ? "Refreshing…" : "Refresh"}
             </button>
             {snapshot?.sprint ? (
@@ -854,10 +862,13 @@ export default function App() {
             ) : null}
           </div>
         </div>
+        {snapshot?.sprint ? (
+          <ProductNav tabs={DASHBOARD_TABS} activeId={activeTab} onChange={switchTab} />
+        ) : null}
       </header>
 
       {!snapshot?.sprint ? (
-        <article className="card">
+        <article className="card page-main">
           <strong>No active sprint</strong>
           <p className="sub">
             Open this page on a Jira Software project with an active sprint on
@@ -943,16 +954,7 @@ export default function App() {
               </button>
             </section>
           </section>
-          ) : (
-            <div className="detail-toolbar">
-              <p className="sub">
-                {snapshot?.sprint?.name || "Current sprint"}
-                {sprintEnded ? " · Sprint end date passed — closed sprint, not an active forecast." : ""}
-              </p>
-            </div>
-          )}
-
-          <ProductNav tabs={DASHBOARD_TABS} activeId={activeTab} onChange={switchTab} />
+          ) : null}
 
           {activeTab === "overview" ? (
             <section className="overview-grid">

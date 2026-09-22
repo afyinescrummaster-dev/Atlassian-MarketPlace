@@ -12,6 +12,20 @@ export const DASHBOARD_TABS = [
   { id: "briefs", label: "Briefs" },
 ];
 
+export const READINESS_NAV_LABELS = {
+  missing_description: "Missing descriptions",
+  weak_description: "Weak descriptions",
+  acceptance_criteria_not_detected: "AC not detected",
+  missing_estimate: "Missing estimates",
+  missing_assignee: "Unassigned",
+  existing_blocker: "Existing blocker",
+  carryover_entering: "Carryover",
+  stale_at_sprint_start: "Stale at start",
+  unusually_large: "Large relative",
+  missing_parent: "Parent/dependency",
+  dependency_risk: "Parent/dependency",
+};
+
 export const READINESS_SIGNAL_TITLES = {
   missing_description: "Missing descriptions",
   weak_description: "Weak descriptions",
