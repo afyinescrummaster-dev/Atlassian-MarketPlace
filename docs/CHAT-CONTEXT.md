@@ -3,8 +3,8 @@
 This file is the handoff for Cursor mobile or a remote agent. Read it before
 changing the Forge app. Do not invent missing Jira fields or sample metrics.
 
-Last updated: 2026-09-10 (`feature/sprint-coaching-readiness` → Forge
-development **3.0.0**; official milestone on `main` remains `di-v1.1.0`)
+Last updated: 2026-09-21 (`feature/di-premium-detail-views` → Forge
+development **3.3.0**; official milestone on `main` remains `di-v1.1.0`)
 
 ## What this repo is
 
@@ -20,9 +20,9 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
 - Delivery Intelligence **`di-v1.1.0`** — Sprint Intelligence, on
-  `main`. Working branch `feature/sprint-coaching-readiness` adds
-  readiness/pace/coaching; live Forge development **3.0.0**
-  (`deploy/di/development/3.0.0`, UI Build `2.10.0`). V1 baseline
+  `main`. Working branch `feature/di-premium-detail-views` is live Forge
+  development **3.3.0** (`deploy/di/development/3.3.0`, UI Build `2.12.1`).
+  V1 baseline
   `di-v1.0.0` @ `c780ff5` remains. Historical recovered known-good
   `di-v0.1.1` @ `4f44eb3` is kept. See `docs/RECOVERY-2.8.0.md` and
   `docs/DEPLOYMENT-MODEL.md`. Deploy: `./scripts/forge-deploy.sh`.
@@ -266,6 +266,15 @@ official tag using the existing `di-v*` scheme. Merged
 `feature/sprint-intelligence-core` into `main` (`a25cd5b`) and tagged
 **`di-v1.1.0`**. Did not rewrite `di-v1.0.0` or `di-v0.1.1`. Did not
 deploy again; live development remains **2.18.0**.
+
+### 2026-09-21 — Product-page visual fidelity (Forge 3.3.0)
+
+Tightened the five detail tabs toward the approved mockups: white
+full-bleed chrome, product header, flat panels, table-first workspaces.
+Calculations and Overview unchanged. Branch
+`feature/di-premium-detail-views` @ `7e9d715d692b`. UI Build `2.12.1`.
+Tests 68 passing. Forge development **3.3.0**
+(`deploy/di/development/3.3.0`). Not merged to `main`. No `di-v*` tag.
 
 ### 2026-09-21 — Premium detail views (Forge 3.2.0)
 

@@ -7,6 +7,34 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-09-21 — [Delivery Intelligence] product-page visual fidelity (dev 3.3.0)
+
+### Goal
+Make the five approved detail screens closer to the Jira product-page
+mockups: full-bleed white chrome, flat panels, table-first workspaces.
+Preserve calculations, Overview, Rovo policy, app IDs, and scopes.
+Do not merge to `main`. Do not create `di-v*` tags.
+
+### Done
+- Branch: `feature/di-premium-detail-views` @ `7e9d715d692b`
+- Shared product header (title, Dev lozenge, sprint context, Refresh,
+  Create brief, tabs)
+- Readiness: ring + horizontal dimensions, category nav, paged table, rail
+- Pace: elapsed bar, segmented flow, signals table, coach interpretation
+- Scope: equation, SVG line, numbered compound risks, added table
+- Learning: insight + series spark, pattern/comparison tables
+- Briefs: settings / preview / trust studio
+- UI Build `2.12.1`
+- Tests: 68 passing; UI eslint clean; Forge lint clean
+- Forge development **3.3.0** (`deploy/di/development/3.3.0`)
+- Rollback: `./scripts/rollback-deployment.sh di development 3.2.0`
+
+### Out of scope (kept out)
+- Merge to `main` / official `di-v*` tag
+- Engine, health formula, or Rovo auto-invoke changes
+
+---
+
 ## 2026-09-21 — [Delivery Intelligence] premium detail views (dev 3.2.0)
 
 ### Goal
