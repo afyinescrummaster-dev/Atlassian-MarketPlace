@@ -7,6 +7,32 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-09-21 — [Delivery Intelligence] premium detail views (dev 3.2.0)
+
+### Goal
+Implement the approved Readiness, Delivery Pace, Scope & Risk, Learning,
+and Brief Studio designs as reusable Forge Custom UI. Preserve the
+Overview already on `feature/dashboard-ia-tabs`. Do not merge to `main`.
+Do not create `di-v*` tags.
+
+### Done
+- Branch: `feature/di-premium-detail-views` @ `e380bedd6a0c`
+- Branched from live coaching + IA line, not `main` — `main` lacks the
+  coaching snapshot and Overview the designs require
+- UI-only view models + reusable `DashboardKit` + five detail views
+- Findings remain a filtered drill-down, not a seventh tab of cards
+- Engine, health, Rovo policy, app IDs, and scopes unchanged
+- UI Build `2.12.0`
+- Tests: 66 passing; Forge lint clean
+- Forge development **3.2.0** (`deploy/di/development/3.2.0`)
+- Rollback: `./scripts/rollback-deployment.sh di development 3.2.0`
+
+### Out of scope (kept out)
+- Merge to `main` / official `di-v*` tag
+- Analysis-engine rewrites, invented removals, fabricated history
+
+---
+
 ## 2026-09-21 — [Delivery Intelligence] tabbed dashboard IA (dev 3.1.0)
 
 ### Goal

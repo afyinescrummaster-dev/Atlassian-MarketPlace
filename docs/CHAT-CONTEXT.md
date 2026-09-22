@@ -267,6 +267,20 @@ official tag using the existing `di-v*` scheme. Merged
 **`di-v1.1.0`**. Did not rewrite `di-v1.0.0` or `di-v0.1.1`. Did not
 deploy again; live development remains **2.18.0**.
 
+### 2026-09-21 — Premium detail views (Forge 3.2.0)
+
+UI-only redesign on `feature/di-premium-detail-views` @ `e380bedd6a0c`,
+from the coaching + Overview line (not `main`). Detail tabs now follow
+the approved designs: Readiness (dimensions, searchable table, evidence
+drawer), Delivery Pace (flow, grouped signals, closed-sprint copy),
+Scope & Risk (equation, timeline from added dates, compound risks),
+Learning (reliable series only), Brief Studio (audience/detail controls,
+deterministic facts vs Rovo). Overview preserved. Findings stay a
+filtered drill-down. Engine/health/Rovo/app IDs/scopes unchanged. UI
+Build `2.12.0`. Tests 66/66. Live Forge development **3.2.0**
+(`deploy/di/development/3.2.0`). Not merged; no `di-v*` tag. Rollback:
+`./scripts/rollback-deployment.sh di development 3.2.0`.
+
 ### 2026-09-21 — Tabbed dashboard IA (Forge 3.1.0)
 
 UI-only redesign on `feature/dashboard-ia-tabs` @ `b1a1cebac03a`. Tabs:
