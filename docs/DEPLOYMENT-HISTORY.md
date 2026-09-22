@@ -31,7 +31,7 @@ Do not guess a rollback into unrecorded 2.1.0–2.12.0 deploys.
 
 | App | Deployment revision | Git SHA | Forge env | Forge version | When (UTC) | Notes |
 |---|---|---|---|---|---|---|
-| Delivery Intelligence | `deploy/di/development/3.3.0` | `7e9d715d692b` | `development` | **3.3.0** | 2026-09-22T00:47:50Z | Deployed from clean 7e9d715d692b via scripts/forge-deploy.sh |
+| Delivery Intelligence | `deploy/di/development/3.4.0` | `b504c97ca05e` | `development` | **3.4.0** | 2026-09-22T01:08:03Z | Deployed from clean b504c97ca05e via scripts/forge-deploy.sh |
 | Legacy root app | `deploy/legacy/development/4.8.0` | `a0c7df4` | `development` | **4.8.0** | 2026-08-27T00:00:00Z | Admin Health v0.4 boxed Custom UI |
 
 Site: `https://one-atlas-qzzp.atlassian.net`
@@ -43,6 +43,7 @@ Code: `apps/delivery-intelligence/`
 
 | When (UTC) | Kind | Branch | Git SHA | Env | Forge version | Revision | Result |
 |---|---|---|---|---|---|---|---|
+| 2026-09-22T01:08:03Z | deploy | feature/di-fluent-overview | `b504c97ca05e` | development | 3.4.0 | `deploy/di/development/3.4.0` | Deployed from clean b504c97ca05e via scripts/forge-deploy.sh |
 | 2026-09-22T00:47:50Z | deploy | feature/di-premium-detail-views | `7e9d715d692b` | development | 3.3.0 | `deploy/di/development/3.3.0` | Deployed from clean 7e9d715d692b via scripts/forge-deploy.sh |
 | 2026-09-22T00:30:26Z | deploy | feature/di-premium-detail-views | `e380bedd6a0c` | development | 3.2.0 | `deploy/di/development/3.2.0` | Deployed from clean e380bedd6a0c via scripts/forge-deploy.sh |
 | 2026-09-21T23:47:51Z | deploy | feature/dashboard-ia-tabs | `b1a1cebac03a` | development | 3.1.0 | `deploy/di/development/3.1.0` | Deployed from clean b1a1cebac03a via scripts/forge-deploy.sh |

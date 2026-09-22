@@ -7,6 +7,31 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-09-21 — [Delivery Intelligence] Fluent Overview restyle (dev 3.4.0)
+
+### Goal
+Restyle the entire DI frontend using the approved Fluent-inspired
+Overview. Presentation only. Do not merge to `main`. No `di-v*` tag.
+
+### Done
+- Branch: `feature/di-fluent-overview` @ `b504c97ca05e`
+- Branched from live 3.3.0 line, not `main` — `main` still lacks coaching
+  snapshot fields and the tabbed IA this Overview requires
+- Tokens + Fluent primitives; command bar; segmented nav
+- Overview: Delivery Outlook, Recommended Now, Sprint Flow, Focus Queue,
+  Sprint Quality, Learning Signal, Brief Studio
+- Detail tabs inherit the same canvas/surface system
+- UI Build `2.13.0`
+- Tests: 69 passing; UI eslint clean; Forge lint clean
+- Forge development **3.4.0** (`deploy/di/development/3.4.0`)
+- Rollback: `./scripts/rollback-deployment.sh di development 3.3.0`
+
+### Out of scope (kept out)
+- Engine, health formula, Rovo auto-invoke, app IDs, scopes
+- Merge to `main` / official `di-v*` tag
+
+---
+
 ## 2026-09-21 — [Delivery Intelligence] product-page visual fidelity (dev 3.3.0)
 
 ### Goal

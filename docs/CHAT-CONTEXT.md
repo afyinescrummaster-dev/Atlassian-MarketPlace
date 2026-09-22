@@ -3,8 +3,8 @@
 This file is the handoff for Cursor mobile or a remote agent. Read it before
 changing the Forge app. Do not invent missing Jira fields or sample metrics.
 
-Last updated: 2026-09-21 (`feature/di-premium-detail-views` → Forge
-development **3.3.0**; official milestone on `main` remains `di-v1.1.0`)
+Last updated: 2026-09-21 (`feature/di-fluent-overview` → Forge
+development **3.4.0**; official milestone on `main` remains `di-v1.1.0`)
 
 ## What this repo is
 
@@ -20,8 +20,8 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
 - Delivery Intelligence **`di-v1.1.0`** — Sprint Intelligence, on
-  `main`. Working branch `feature/di-premium-detail-views` is live Forge
-  development **3.3.0** (`deploy/di/development/3.3.0`, UI Build `2.12.1`).
+  `main`. Working branch `feature/di-fluent-overview` is live Forge
+  development **3.4.0** (`deploy/di/development/3.4.0`, UI Build `2.13.0`).
   V1 baseline
   `di-v1.0.0` @ `c780ff5` remains. Historical recovered known-good
   `di-v0.1.1` @ `4f44eb3` is kept. See `docs/RECOVERY-2.8.0.md` and
@@ -266,6 +266,14 @@ official tag using the existing `di-v*` scheme. Merged
 `feature/sprint-intelligence-core` into `main` (`a25cd5b`) and tagged
 **`di-v1.1.0`**. Did not rewrite `di-v1.0.0` or `di-v0.1.1`. Did not
 deploy again; live development remains **2.18.0**.
+
+### 2026-09-21 — Fluent Overview restyle (Forge 3.4.0)
+
+Presentation-only Fluent workspace: tinted canvas, command bar, segmented
+nav, Delivery Outlook + Recommended Now + Sprint Flow + Focus Queue.
+Branch `feature/di-fluent-overview` @ `b504c97ca05e`. UI Build `2.13.0`.
+Tests 69 passing. Forge development **3.4.0**
+(`deploy/di/development/3.4.0`). Not merged to `main`. No `di-v*` tag.
 
 ### 2026-09-21 — Product-page visual fidelity (Forge 3.3.0)
 
