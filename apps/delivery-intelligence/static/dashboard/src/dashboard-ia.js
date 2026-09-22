@@ -4,12 +4,12 @@
  */
 
 export const DASHBOARD_TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "readiness", label: "Readiness" },
-  { id: "pace", label: "Delivery Pace" },
-  { id: "scope", label: "Scope & Risk" },
-  { id: "learning", label: "Learning" },
-  { id: "briefs", label: "Briefs" },
+  { id: "overview", label: "Overview", icon: "overview" },
+  { id: "readiness", label: "Readiness", icon: "readiness" },
+  { id: "pace", label: "Delivery Pace", icon: "pace" },
+  { id: "scope", label: "Scope & Risk", icon: "scope" },
+  { id: "learning", label: "Learning", icon: "learning" },
+  { id: "briefs", label: "Briefs", icon: "briefs" },
 ];
 
 export const READINESS_NAV_LABELS = {
@@ -393,6 +393,99 @@ export const topCoachAttention = (snapshot, limit = 3) =>
 export const allFindingsCount = (snapshot = null) =>
   snapshot?.readiness?.counts?.totalFindings ??
   (snapshot?.readinessFindings || []).length;
+
+export const outlookNarrative = (snapshot = null, now = new Date()) => {
+  const ended = isSprintEndPassed(snapshot?.sprint, now);
+  const completed = snapshot?.completionPercent;
+  const done = snapshot?.deliveryPace?.workStateCounts?.done;
+  const stale = snapshot?.staleCount ?? 0;
+  const blocked = snapshot?.blockedCount ?? 0;
+  const growth = snapshot?.scopeChangePercent;
+  const lead =
+    ended && (completed === 0 || done === 0)
+      ? "The sprint ended with no completed work."
+      : ended
+        ? `The sprint ended with ${completed ?? "—"}% of committed work complete.`
+        : completed === 0 || done === 0
+          ? "No committed work is complete yet."
+          : `${completed ?? "—"}% of committed work is complete.`;
+  const extras = [];
+  if (growth != null && growth >= 100) {
+    extras.push("scope more than doubled after start");
+  } else if (growth != null && growth > 0) {
+    extras.push(`scope increased ${growth}% after start`);
+  }
+  if (stale > 0) {
+    extras.push(`${stale} issue${stale === 1 ? " is" : "s are"} stale`);
+  }
+  if (blocked > 0) {
+    extras.push(
+      blocked === 1 ? "one blocker remained unresolved" : `${blocked} blockers remained unresolved`,
+    );
+  }
+  if (!extras.length) {
+    return lead;
+  }
+  const clause = extras.length === 1
+    ? extras[0]
+    : `${extras.slice(0, -1).join(", ")}, and ${extras[extras.length - 1]}`;
+  return `${lead} ${clause[0].toUpperCase()}${clause.slice(1)}.`;
+};
+
+export const recommendedNow = (snapshot = null) => {
+  const coaching = (snapshot?.coachingInterventions || []).slice(0, 3);
+  if (coaching.length) {
+    return coaching.map((item) => ({
+      id: `coach:${item.id}`,
+      title: item.title,
+      summary: item.suggestedIntervention || item.interpretation || item.evidence,
+      drillId: `coach:${item.id}`,
+    }));
+  }
+  const items = [];
+  const topBlocked = [...(snapshot?.blockedIssues || [])].sort(
+    (left, right) => (right.ageDays || 0) - (left.ageDays || 0),
+  )[0];
+  if (topBlocked) {
+    items.push({
+      id: "blocked",
+      title: `Review unresolved blocker ${topBlocked.key}`,
+      summary:
+        topBlocked.ageDays != null
+          ? `Blocked for ${topBlocked.ageDays} day${topBlocked.ageDays === 1 ? "" : "s"}.`
+          : "Blocked work remains open.",
+      drillId: "blocked",
+    });
+  }
+  if ((snapshot?.staleCount || 0) > 0) {
+    items.push({
+      id: "stale",
+      title: "Confirm status of stale work",
+      summary: `${snapshot.staleCount} issue${
+        snapshot.staleCount === 1 ? "" : "s"
+      } had no updates for 7 or more days.`,
+      drillId: "stale",
+    });
+  }
+  if ((snapshot?.completionPercent || 0) === 0 || (snapshot?.deliveryPace?.workStateCounts?.done || 0) === 0) {
+    items.push({
+      id: "completion",
+      title: "Replan unfinished scope",
+      summary: "Consider finishing active work or moving unfinished items to the next sprint.",
+      drillId: "completion",
+    });
+  } else if ((snapshot?.addedIssueCount || 0) > 0) {
+    items.push({
+      id: "added",
+      title: "Review late-added work",
+      summary: `${snapshot.addedIssueCount} issue${
+        snapshot.addedIssueCount === 1 ? " was" : "s were"
+      } added after sprint start.`,
+      drillId: "added",
+    });
+  }
+  return items.slice(0, 3);
+};
 
 export const paceHeadline = (sprintPace, sprint, now = new Date()) => {
   if (isSprintEndPassed(sprint, now)) {

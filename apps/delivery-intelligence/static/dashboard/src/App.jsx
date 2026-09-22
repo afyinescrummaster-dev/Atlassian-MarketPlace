@@ -18,43 +18,27 @@ import {
   groupPaceSignals,
   groupReadinessFindings,
   isSprintEndPassed,
-  overviewReadinessCounts,
   paceHeadline,
-  paceSummaryCopy,
-  pickLearningInsight,
   topCoachAttention,
 } from "./dashboard-ia.js";
 import { ProductNav } from "./components/DashboardKit.jsx";
+import OverviewView from "./views/OverviewView.jsx";
 import ReadinessView from "./views/ReadinessView.jsx";
 import PaceView from "./views/PaceView.jsx";
 import ScopeView from "./views/ScopeView.jsx";
 import LearningView from "./views/LearningView.jsx";
 import BriefsView from "./views/BriefsView.jsx";
 import "./App.css";
+import "./fluent.css";
 
 const AGENT_KEY = "delivery-intelligence-agent";
 const AGENT_NAME = "Delivery Intelligence";
-const UI_BUILD = "2.12.1";
+const UI_BUILD = "2.13.0";
 
 const BRIEF_KEYS = {
   team: "teamUpdate",
   leadership: "leadershipBrief",
   retro: "retrospectiveSummary",
-};
-
-const formatMetric = (value, suffix = "") => {
-  if (value == null || Number.isNaN(value)) {
-    return "—";
-  }
-  return `${value}${suffix}`;
-};
-
-const formatSigned = (value, suffix = "") => {
-  if (value == null || Number.isNaN(value)) {
-    return "—";
-  }
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value}${suffix}`;
 };
 
 const formatShortDate = (value) => {
@@ -66,26 +50,6 @@ const formatShortDate = (value) => {
     return null;
   }
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-};
-
-const statusClass = (status) => {
-  if (status === "On Track") {
-    return "good";
-  }
-  if (status === "Needs Attention") {
-    return "bad";
-  }
-  return "";
-};
-
-const readinessTone = (assessment) => {
-  if (assessment === "Ready") {
-    return "good";
-  }
-  if (assessment === "Needs attention") {
-    return "bad";
-  }
-  return "";
 };
 
 const IssueRow = ({ issue, onOpen }) => {
@@ -130,7 +94,7 @@ const IssueList = ({ issues, empty, onOpen }) => {
 };
 
 const DrilldownPanel = ({ title, onClose, onOpenJira, canOpenJira, children }) => (
-  <article className="card drilldown">
+  <article className="surface elevated drilldown drawer-enter">
     <div className="drilldown-head">
       <strong>{title}</strong>
       <div className="btn-row">
@@ -420,11 +384,6 @@ export default function App() {
   );
   const coachItems = useMemo(() => buildCoachAttentionItems(snapshot), [snapshot]);
   const overviewCoachItems = useMemo(() => topCoachAttention(snapshot, 3), [snapshot]);
-  const readinessCounts = useMemo(
-    () => overviewReadinessCounts(snapshot?.readiness),
-    [snapshot],
-  );
-  const learningInsight = useMemo(() => pickLearningInsight(snapshot), [snapshot]);
   const coachingById = useMemo(() => {
     const map = new Map();
     for (const item of snapshot?.coachingInterventions || []) {
@@ -708,122 +667,9 @@ export default function App() {
     );
   };
 
-  const renderBriefBuilder = (compact = false) => (
-    <article className={`card brief-card ${compact ? "compact" : ""}`}>
-      <div className="card-head">
-        <h3>Brief Builder</h3>
-      </div>
-      <p className="sub">
-        {compact
-          ? "Create a concise team update based on the latest sprint data, key risks, and top recommendations."
-          : "Briefs are deterministic. Rovo is user-triggered only and never runs on load or refresh."}
-      </p>
-      <div className="btn-row">
-        <button
-          className={`btn ${briefKind === "team" ? "primary" : ""}`}
-          type="button"
-          onClick={() => setBriefKind("team")}
-        >
-          Team update
-        </button>
-        <button
-          className={`btn ${briefKind === "leadership" ? "primary" : ""}`}
-          type="button"
-          onClick={() => setBriefKind("leadership")}
-        >
-          Leadership brief
-        </button>
-        <button
-          className={`btn ${briefKind === "retro" ? "primary" : ""}`}
-          type="button"
-          onClick={() => setBriefKind("retro")}
-        >
-          Retrospective
-        </button>
-      </div>
-      {!compact && selectedBrief ? (
-        <pre className="brief-preview">{selectedBrief.plain}</pre>
-      ) : null}
-      {!compact && !selectedBrief ? (
-        <p className="sub">Briefs appear once an active sprint snapshot is available.</p>
-      ) : null}
-      <div className="btn-row">
-        <button
-          className="btn"
-          type="button"
-          disabled={!selectedBrief}
-          onClick={() => copyBrief(false)}
-        >
-          Copy brief
-        </button>
-        {!compact ? (
-          <button
-            className="btn"
-            type="button"
-            disabled={!selectedBrief}
-            onClick={() => copyBrief(true)}
-          >
-            Copy markdown
-          </button>
-        ) : null}
-        <button
-          className="btn primary"
-          type="button"
-          disabled={!selectedBrief || !snapshot?.sprint}
-          onClick={openBriefInRovo}
-        >
-          Open in Rovo
-        </button>
-      </div>
-      {copyMessage ? <p className="note">{copyMessage}</p> : null}
-      {!compact ? (
-        <>
-          <div className="btn-row" style={{ marginTop: 12 }}>
-            <button
-              className="btn"
-              type="button"
-              disabled={!snapshot?.sprint}
-              onClick={() => openRovo(ROVO_INTENTS.explain)}
-            >
-              Explain sprint
-            </button>
-            <button
-              className="btn"
-              type="button"
-              disabled={!snapshot?.sprint}
-              onClick={() => openRovo(ROVO_INTENTS.recommend)}
-            >
-              Recommend actions
-            </button>
-            <button
-              className="btn"
-              type="button"
-              disabled={!snapshot?.sprint}
-              onClick={() => openRovo(ROVO_INTENTS.brief)}
-            >
-              Generate leadership brief
-            </button>
-          </div>
-          {rovoEnabled === false ? (
-            <p className="note">
-              Atlassian Rovo is not enabled on this site. Deterministic metrics
-              remain available; AI explanations require Rovo on a paid Jira plan.
-            </p>
-          ) : null}
-          {aiMessage ? <p className="note">{aiMessage}</p> : null}
-        </>
-      ) : null}
-    </article>
-  );
-
-  const healthPercent = Math.max(
-    0,
-    Math.min(100, Number(snapshot.healthScore) || 0),
-  );
-
   return (
-    <div className="page" data-ui-build={UI_BUILD}>
-      <header className="product-header">
+    <div className="page canvas" data-ui-build={UI_BUILD}>
+      <header className="product-header acrylic">
         <div className="product-header-top">
           <div className="brand">
             <div className="brand-mark" aria-hidden="true">DI</div>
@@ -836,19 +682,21 @@ export default function App() {
               </p>
             </div>
           </div>
-          <div className="product-context">
+          <div className="command-bar" role="toolbar" aria-label="Sprint commands">
             {snapshot?.sprint ? (
               <>
-                <span>Sprint: {snapshot.sprint.name}</span>
+                <span className="command-item">Sprint: {snapshot.sprint.name}</span>
                 {sprintEnded ? (
                   <span className="pill bad">Sprint end date passed</span>
-                ) : null}
+                ) : (
+                  <span className="pill">{paceHeadline(snapshot.sprintPace, snapshot.sprint)}</span>
+                )}
               </>
             ) : (
-              <span>{contextLine || "No active sprint"}</span>
+              <span className="command-item">{contextLine || "No active sprint"}</span>
             )}
             {snapshot?.generatedAt ? (
-              <span className="meta">
+              <span className="command-item">
                 Last updated {new Date(snapshot.generatedAt).toLocaleString()}
               </span>
             ) : null}
@@ -860,6 +708,20 @@ export default function App() {
                 Create brief
               </button>
             ) : null}
+            <details className="overflow">
+              <summary className="btn icon-btn" aria-label="More actions">⋯</summary>
+              <div className="overflow-menu" role="menu">
+                <button type="button" role="menuitem" disabled={!snapshot?.sprint} onClick={() => openRovo(ROVO_INTENTS.explain)}>
+                  Explain sprint
+                </button>
+                <button type="button" role="menuitem" disabled={!snapshot?.sprint} onClick={() => openRovo(ROVO_INTENTS.recommend)}>
+                  Recommend actions
+                </button>
+                <button type="button" role="menuitem" disabled={!selectedBrief} onClick={() => copyBrief(true)}>
+                  Copy Markdown
+                </button>
+              </div>
+            </details>
           </div>
         </div>
         {snapshot?.sprint ? (
@@ -883,234 +745,21 @@ export default function App() {
       ) : (
         <>
           {activeTab === "overview" ? (
-          <section className="health-banner" aria-label="Sprint health summary">
-            <article className="card health-score-card">
-              <div className="score-row">
-                <div className="score">
-                  {formatMetric(snapshot.healthScore)} / {snapshot.healthMax || 100}
-                </div>
-                <span className={`pill ${statusClass(snapshot.healthStatus)}`}>
-                  {snapshot.healthStatus || "—"}
-                </span>
-              </div>
-              <p className="sub">
-                Generated {new Date(snapshot.generatedAt).toLocaleString()}
-              </p>
-              <p className="sub">
-                {snapshot.currentIssueCount ?? snapshot.totalIssueCount ?? 0} current
-                {snapshot.originalCommittedCount != null
-                  ? ` · ${snapshot.originalCommittedCount} original commitment`
-                  : ""}
-                {snapshot.addedIssueCount != null
-                  ? ` · ${snapshot.addedIssueCount} added after start`
-                  : ""}
-              </p>
-              {(snapshot.limitations || []).slice(0, 2).map((item) => (
-                <p className="note" key={item}>
-                  {item}
-                </p>
-              ))}
-            </article>
-            <section className="kpi-grid" aria-label="Sprint KPIs">
-              <button
-                className={`kpi ${drilldown === "completion" ? "active" : ""}`}
-                type="button"
-                onClick={() => showDrilldown("completion")}
-              >
-                <div className="n">{formatMetric(snapshot.completionPercent, "%")}</div>
-                <div className="l">Completion</div>
-              </button>
-              <button
-                className={`kpi ${drilldown === "added" ? "active" : ""}`}
-                type="button"
-                onClick={() => showDrilldown("added")}
-              >
-                <div className="n">{formatSigned(snapshot.scopeChangePercent, "%")}</div>
-                <div className="l">Scope growth</div>
-              </button>
-              <button
-                className={`kpi ${drilldown === "carryover" ? "active" : ""}`}
-                type="button"
-                onClick={() => showDrilldown("carryover")}
-              >
-                <div className="n">{formatMetric(snapshot.carryoverCount)}</div>
-                <div className="l">Carryover</div>
-              </button>
-              <button
-                className={`kpi ${drilldown === "blocked" ? "active" : ""}`}
-                type="button"
-                onClick={() => showDrilldown("blocked")}
-              >
-                <div className="n">{formatMetric(snapshot.blockedCount)}</div>
-                <div className="l">Blocked</div>
-              </button>
-              <button
-                className={`kpi ${drilldown === "stale" ? "active" : ""}`}
-                type="button"
-                onClick={() => showDrilldown("stale")}
-              >
-                <div className="n">{formatMetric(snapshot.staleCount)}</div>
-                <div className="l">Stale</div>
-              </button>
-            </section>
-          </section>
-          ) : null}
-
-          {activeTab === "overview" ? (
-            <section className="overview-grid">
-              <article className="card">
-                <div className="card-head">
-                  <h3>Coach&apos;s Attention</h3>
-                </div>
-                <p className="sub card-intro">Top items that need your attention</p>
-                {overviewCoachItems.length === 0 ? (
-                  <p className="sub">No ranked attention items were detected from the current sprint data.</p>
-                ) : (
-                  <div className="grouped-list">
-                    {overviewCoachItems.map((item) => (
-                      <AttentionRow
-                        key={item.id}
-                        item={item}
-                        active={drilldown === item.drillId}
-                        onOpen={showDrilldown}
-                      />
-                    ))}
-                  </div>
-                )}
-                <button
-                  className="text-link"
-                  type="button"
-                  onClick={() => showDrilldown("findings")}
-                >
-                  View all {findingsTotal} finding{findingsTotal === 1 ? "" : "s"}
-                </button>
-              </article>
-
-              <article className="card">
-                <div className="card-head">
-                  <h3>Sprint Readiness</h3>
-                  <span className={`pill ${readinessTone(snapshot.readiness?.assessment)}`}>
-                    {snapshot.readiness?.assessment || "Partial data"}
-                  </span>
-                </div>
-                <p className="sub">
-                  {snapshot.readiness?.sprintGoalPolicy?.affectsReadiness === false
-                    ? "Sprint goal does not affect readiness"
-                    : "Readiness uses issue fields and deterministic heuristics."}
-                </p>
-                <div className="progress-row">
-                  <div className="progress-track" aria-hidden="true">
-                    <div className="progress-fill" style={{ width: `${healthPercent}%` }} />
-                  </div>
-                  <span className="progress-label">
-                    {formatMetric(snapshot.healthScore)} / {snapshot.healthMax || 100}
-                  </span>
-                </div>
-                <div className="count-grid">
-                  {readinessCounts.map((row) => (
-                    <button
-                      key={row.key}
-                      className={`count-chip ${drilldown === row.drillId ? "active" : ""}`}
-                      type="button"
-                      onClick={() => showDrilldown(row.drillId)}
-                    >
-                      <strong>{row.count}</strong>
-                      <span>{row.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="note">Improve issue quality to improve delivery predictability.</p>
-                <button className="btn" type="button" onClick={() => switchTab("readiness")}>
-                  Review readiness
-                </button>
-              </article>
-
-              <article className="card compact-scope">
-                <div className="card-head">
-                  <h3>Scope Movement</h3>
-                </div>
-                <p className="sub card-intro">Change in scope since sprint start</p>
-                <div className="scope-equation">
-                  <button
-                    className={`scope-stat ${drilldown === "original" ? "active" : ""}`}
-                    type="button"
-                    onClick={() => showDrilldown("original")}
-                  >
-                    <div className="n">{formatMetric(snapshot.originalCommittedCount)}</div>
-                    <div className="l">Original commitment</div>
-                  </button>
-                  <span className="scope-op" aria-hidden="true">+</span>
-                  <button
-                    className={`scope-stat ${drilldown === "added" ? "active" : ""}`}
-                    type="button"
-                    onClick={() => showDrilldown("added")}
-                  >
-                    <div className="n">{formatMetric(snapshot.addedIssueCount)}</div>
-                    <div className="l">Added after start</div>
-                  </button>
-                  <span className="scope-op" aria-hidden="true">=</span>
-                  <button
-                    className={`scope-stat ${drilldown === "completion" ? "active" : ""}`}
-                    type="button"
-                    onClick={() => showDrilldown("completion")}
-                  >
-                    <div className="n">{formatMetric(snapshot.currentIssueCount)}</div>
-                    <div className="l">Current scope</div>
-                  </button>
-                  <button
-                    className={`scope-stat growth ${drilldown === "added" ? "active" : ""}`}
-                    type="button"
-                    onClick={() => showDrilldown("added")}
-                  >
-                    <div className="n">{formatSigned(snapshot.scopeChangePercent, "%")}</div>
-                    <div className="l">Scope growth</div>
-                  </button>
-                </div>
-              </article>
-
-              <article className="card">
-                <div className="card-head">
-                  <h3>Delivery Pace</h3>
-                  <span className={`pill ${sprintEnded ? "bad" : ""}`}>
-                    {paceHeadline(snapshot.sprintPace, snapshot.sprint)}
-                  </span>
-                </div>
-                <div className="pace-summary">
-                  <div>
-                    <div className="n">{formatMetric(snapshot.sprintPace?.completedPercent, "%")}</div>
-                    <div className="l">Completed</div>
-                  </div>
-                  <div>
-                    <div className="n">
-                      {formatMetric(snapshot.deliveryPace?.workStateCounts?.notStarted)}
-                    </div>
-                    <div className="l">Not started</div>
-                  </div>
-                  <div>
-                    <div className="n">
-                      {formatMetric(snapshot.deliveryPace?.workStateCounts?.inProgress)}
-                    </div>
-                    <div className="l">In progress</div>
-                  </div>
-                </div>
-                <p className="sub">{paceSummaryCopy(snapshot.sprintPace, snapshot.sprint)}</p>
-                <button className="btn" type="button" onClick={() => showDrilldown("completion")}>
-                  View sprint issues
-                </button>
-              </article>
-
-              <article className="card">
-                <div className="card-head">
-                  <h3>Learning Across Sprints</h3>
-                </div>
-                <p className="sub">{learningInsight.summary}</p>
-                <button className="btn" type="button" onClick={() => switchTab("learning")}>
-                  View learning
-                </button>
-              </article>
-
-              {renderBriefBuilder(true)}
-            </section>
+            <OverviewView
+              snapshot={snapshot}
+              drilldown={drilldown}
+              showDrilldown={showDrilldown}
+              switchTab={switchTab}
+              overviewCoachItems={overviewCoachItems}
+              findingsTotal={findingsTotal}
+              briefKind={briefKind}
+              setBriefKind={setBriefKind}
+              selectedBrief={selectedBrief}
+              copyBrief={copyBrief}
+              copyMessage={copyMessage}
+              openBriefInRovo={openBriefInRovo}
+              onOpenRovo={() => openRovo(ROVO_INTENTS.recommend)}
+            />
           ) : null}
 
           {activeTab === "readiness" ? (
@@ -1172,7 +821,14 @@ export default function App() {
           ) : null}
 
           {renderDrilldown(drilldown)}
-          {navMessage ? <p className="note">{navMessage}</p> : null}
+          {navMessage ? <p className="note page-note">{navMessage}</p> : null}
+          {rovoEnabled === false ? (
+            <p className="note page-note">
+              Atlassian Rovo is not enabled on this site. Deterministic metrics
+              remain available; AI explanations require Rovo on a paid Jira plan.
+            </p>
+          ) : null}
+          {aiMessage ? <p className="note page-note">{aiMessage}</p> : null}
         </>
       )}
     </div>

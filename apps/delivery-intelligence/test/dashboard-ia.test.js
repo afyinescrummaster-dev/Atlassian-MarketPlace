@@ -13,8 +13,10 @@ import {
   overviewReadinessCounts,
   paceHeadline,
   paceSummaryCopy,
+  outlookNarrative,
   pickLearningInsight,
   readableSignalTitle,
+  recommendedNow,
   topCoachAttention,
 } from "../static/dashboard/src/dashboard-ia.js";
 
@@ -182,6 +184,21 @@ test("sprint end date passed replaces active pacing forecast copy", () => {
     ),
     "Behind current pace",
   );
+});
+
+test("outlook narrative and recommended now stay derived from existing facts", () => {
+  const now = new Date("2026-09-21T12:00:00.000Z");
+  const copy = outlookNarrative(fixtureSnapshot, now);
+  assert.match(copy, /ended with no completed work/i);
+  assert.match(copy, /more than doubled/i);
+  assert.match(copy, /17 issues are stale/);
+  assert.match(copy, /one blocker/i);
+  const withCoaching = recommendedNow(fixtureSnapshot);
+  assert.equal(withCoaching[0].drillId, "coach:protect-sprint-focus");
+  const withoutCoaching = recommendedNow({ ...fixtureSnapshot, coachingInterventions: [] });
+  assert.equal(withoutCoaching[0].drillId, "blocked");
+  assert.equal(withoutCoaching[1].drillId, "stale");
+  assert.equal(withoutCoaching[2].drillId, "completion");
 });
 
 test("learning insight uses one readable pattern instead of a full comparison dump", () => {

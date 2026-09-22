@@ -1,16 +1,39 @@
 :root {
-  --bg: #ffffff;
+  --canvas: #e8eef6;
+  --canvas-soft: #f3f6fa;
   --surface: #ffffff;
-  --border: #dfe1e6;
-  --text: #172b4d;
-  --text-subtle: #6b778c;
-  --primary: #0052cc;
-  --success: #36b37e;
-  --warning: #ff8b00;
-  --danger: #de350b;
-  --radius: 8px;
-  --shadow: 0 1px 1px rgba(9, 30, 66, 0.08), 0 0 1px rgba(9, 30, 66, 0.12);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --surface-tint: #f7f9fc;
+  --surface-warm: #fff6ee;
+  --surface-insight: #f4f0fb;
+  --surface-selected: #e7f0ff;
+  --surface-warn: #fff4e5;
+  --surface-danger: #fdecea;
+  --text: #1b2430;
+  --text-subtle: #5b6776;
+  --primary: #0c66e4;
+  --primary-soft: #deebff;
+  --success: #1f845a;
+  --warning: #c25100;
+  --danger: #c9372c;
+  --learn: #6b4c9a;
+  --border: #d5dde6;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --elev-1: 0 1px 2px rgba(27, 36, 48, 0.06);
+  --elev-2: 0 8px 24px rgba(27, 36, 48, 0.08);
+  --motion: 180ms ease;
+  --acrylic: rgba(247, 249, 252, 0.86);
+  --bg: var(--canvas);
+  --shadow: var(--elev-1);
+  --radius: var(--radius-md);
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", sans-serif;
   color: var(--text);
 }
 
@@ -23,10 +46,36 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
-  background: var(--bg);
+  background: var(--canvas);
 }
 
-button {
+button,
+input,
+select,
+summary {
   font: inherit;
+}
+
+button,
+summary {
   cursor: pointer;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+tr:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

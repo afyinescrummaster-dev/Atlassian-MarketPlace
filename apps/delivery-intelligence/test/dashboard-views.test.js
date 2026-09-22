@@ -167,13 +167,19 @@ test("brief modes filter preview sections without changing metrics", () => {
 test("detail views use the Jira product-page chrome instead of stacked cards", () => {
   const root = dirname(fileURLToPath(import.meta.url));
   const app = readFileSync(join(root, "../static/dashboard/src/App.jsx"), "utf8");
+  const overview = readFileSync(join(root, "../static/dashboard/src/views/OverviewView.jsx"), "utf8");
   const readiness = readFileSync(join(root, "../static/dashboard/src/views/ReadinessView.jsx"), "utf8");
   const pace = readFileSync(join(root, "../static/dashboard/src/views/PaceView.jsx"), "utf8");
   const scope = readFileSync(join(root, "../static/dashboard/src/views/ScopeView.jsx"), "utf8");
   const learning = readFileSync(join(root, "../static/dashboard/src/views/LearningView.jsx"), "utf8");
   const briefs = readFileSync(join(root, "../static/dashboard/src/views/BriefsView.jsx"), "utf8");
-  assert.match(app, /className="page"/);
-  assert.match(app, /product-header/);
+  assert.match(app, /className="page canvas"/);
+  assert.match(app, /command-bar/);
+  assert.match(app, /seg-nav|ProductNav/);
+  assert.match(overview, /Delivery outlook/);
+  assert.match(overview, /Recommended now/);
+  assert.match(overview, /Sprint flow/);
+  assert.match(overview, /Focus queue/);
   assert.match(readiness, /readiness-hero/);
   assert.match(pace, /pace-workspace/);
   assert.match(scope, /ScopeLine/);

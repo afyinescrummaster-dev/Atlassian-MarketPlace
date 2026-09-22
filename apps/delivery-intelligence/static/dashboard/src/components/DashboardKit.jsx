@@ -1,6 +1,34 @@
 import { useState } from "react";
 import { attentionLevelLabel } from "../dashboard-ia.js";
 
+const ICON_PATHS = {
+  overview: "M3 10.5 10 4l7 6.5V17a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1v-6.5z",
+  readiness: "M10 3.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zm0 2.2a4.3 4.3 0 1 0 0 8.6 4.3 4.3 0 0 0 0-8.6z",
+  pace: "M4 10h4l2-5 3 10 2-5h3",
+  scope: "M4 5h12v3H4V5zm0 5h8v3H4v-3zm0 5h12v3H4v-3z",
+  learning: "M4 15c2-4 4-6 6-6s4 2 6 6M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+  briefs: "M6 3.5h8l2 2V16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1zm1 5h6M7 12h6",
+};
+
+export const Icon = ({ name }) => (
+  <svg className="icon" viewBox="0 0 20 20" aria-hidden="true">
+    <path
+      d={ICON_PATHS[name] || ICON_PATHS.overview}
+      fill={name === "pace" || name === "learning" ? "none" : "currentColor"}
+      stroke="currentColor"
+      strokeWidth={name === "pace" || name === "learning" ? "1.6" : "0"}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const Surface = ({ as: Tag = "section", tone = "elevated", className = "", children, ...props }) => (
+  <Tag className={`surface ${tone} ${className}`.trim()} {...props}>
+    {children}
+  </Tag>
+);
+
 export const StatusPill = ({ tone = "", children }) => (
   <span className={`pill ${tone}`}>{children}</span>
 );
@@ -12,18 +40,35 @@ export const SeverityPill = ({ severity }) => {
 };
 
 export const ProductNav = ({ tabs, activeId, onChange }) => (
-  <nav className="tabs" aria-label="Delivery Intelligence sections">
+  <nav className="seg-nav" aria-label="Delivery Intelligence sections">
     {tabs.map((tab) => (
       <button
         key={tab.id}
-        className={`tab ${activeId === tab.id ? "active" : ""}`}
+        className={`seg-item ${activeId === tab.id ? "active" : ""}`}
         type="button"
         onClick={() => onChange(tab.id)}
       >
+        <Icon name={tab.icon || tab.id} />
         {tab.label}
       </button>
     ))}
   </nav>
+);
+
+export const FindingRow = ({ index, item, active, onOpen }) => (
+  <div className={`finding-row ${active ? "active" : ""}`}>
+    <span className="finding-index">{index}</span>
+    <div className="finding-copy">
+      <div className="finding-head">
+        <strong className="clip">{item.title}</strong>
+        <SeverityPill severity={item.severity} />
+      </div>
+      {item.summary ? <p className="sub finding-summary">{item.summary}</p> : null}
+    </div>
+    <button className="btn ghost" type="button" onClick={() => onOpen(item.drillId || item)}>
+      {item.suggestedAction || "View"}
+    </button>
+  </div>
 );
 
 export const SectionHeader = ({ kicker, title, subtitle, action, children }) => (
@@ -159,7 +204,7 @@ export const EvidenceDrawer = ({
     );
   }
   return (
-    <aside className={`drawer ${variant}`} aria-label="Issue evidence">
+    <aside className={`drawer drawer-enter ${variant}`} aria-label="Issue evidence">
       <div className="drawer-head">
         <div>
           <strong>{title}</strong>
