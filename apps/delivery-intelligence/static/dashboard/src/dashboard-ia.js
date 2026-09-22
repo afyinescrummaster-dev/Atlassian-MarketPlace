@@ -449,3 +449,429 @@ export const attentionLevelLabel = (severity) => {
 };
 
 export const isInternalSignalId = (id) => INTERNAL_ID_PATTERN.test(String(id || ""));
+
+export const ROVO_POLICY = {
+  autoInvoke: false,
+  note: "Rovo is user-triggered only and never runs on load or refresh. It may refine narrative but must not change objective metrics.",
+};
+
+export const BRIEF_MODES = [
+  { id: "team", key: "teamUpdate", label: "Team update", audience: "Team" },
+  { id: "leadership", key: "leadershipBrief", label: "Leadership brief", audience: "Leadership" },
+  { id: "retro", key: "retrospectiveSummary", label: "Retrospective", audience: "Retrospective" },
+];
+
+export const BRIEF_INCLUDE_DEFAULTS = {
+  health: true,
+  pace: true,
+  scope: true,
+  risks: true,
+  decisions: true,
+  jira: true,
+};
+
+export const READINESS_CONVERSATIONS = {
+  missing_description: "What problem are we solving, and for whom?",
+  weak_description: "What outcome would make this issue clearly done?",
+  acceptance_criteria_not_detected:
+    'What does "done" look like for this issue? Which key scenarios should we validate?',
+  missing_estimate: "What is the smallest useful slice we can finish this sprint?",
+  missing_assignee: "Who owns the next concrete step, and by when?",
+  existing_blocker: "What is the unblock path, and who owns removing it?",
+  carryover_entering: "What made this hard to finish last time, and what will change?",
+  stale_at_sprint_start: "Is this still the right work, or should we split or defer it?",
+  unusually_large: "Can this be split so progress is visible this sprint?",
+  missing_parent: "Which parent or epic should this work roll up to?",
+  dependency_risk: "What external decision or team is this waiting on?",
+};
+
+export const READINESS_WHY = {
+  missing_description: "Without a shared problem statement, teams often start work that later needs rework.",
+  weak_description: "Short or placeholder descriptions make it harder to confirm done and estimate remaining effort.",
+  acceptance_criteria_not_detected:
+    "Without clear acceptance criteria, it is harder to confirm when the work is complete, increase rework risk, and calendar different definitions of done.",
+  missing_estimate: "Unestimated work makes transparent pacing less reliable.",
+  missing_assignee: "Unowned work tends to wait until someone claims the next step.",
+  existing_blocker: "Blocked work rarely clears without an explicit owner for the dependency.",
+  carryover_entering: "Carryover is a system signal about sizing, readiness, or interrupted focus.",
+  stale_at_sprint_start: "Stale items often need a keep, split, or defer decision before more work starts.",
+  unusually_large: "Oversized items hide aging WIP and make completion harder to see.",
+  missing_parent: "Missing parent context can hide dependency and priority conversations.",
+  dependency_risk: "External dependencies need an owner and a next check-in, not silent progress.",
+};
+
+const qualityScore = (findingCount, denominator) => {
+  if (!denominator) {
+    return null;
+  }
+  return Math.max(0, Math.min(100, Math.round(100 - (findingCount / denominator) * 100)));
+};
+
+export const readinessDimensions = (snapshot = null) => {
+  const counts = snapshot?.readiness?.counts || {};
+  const open =
+    snapshot?.openIssues?.length ||
+    snapshot?.deliveryPace?.workStateCounts?.open ||
+    Math.max(1, (snapshot?.currentIssueCount || 0) - (snapshot?.doneCount || 0));
+  return [
+    {
+      id: "clarity",
+      label: "Clarity",
+      score: qualityScore(
+        (counts.missingDescription || 0) + (counts.weakDescription || 0),
+        open,
+      ),
+    },
+    {
+      id: "acceptance",
+      label: "Acceptance criteria",
+      score: qualityScore(counts.acceptanceCriteriaNotDetected || 0, open),
+    },
+    {
+      id: "estimates",
+      label: "Estimates",
+      score: qualityScore(counts.missingEstimate || 0, open),
+    },
+    {
+      id: "ownership",
+      label: "Ownership",
+      score: qualityScore(counts.missingAssignee || 0, open),
+    },
+    {
+      id: "dependencies",
+      label: "Dependencies",
+      score: qualityScore(
+        (counts.blockers || 0) + (counts.dependencyContext || 0),
+        open,
+      ),
+    },
+  ];
+};
+
+export const readinessHeadline = (snapshot = null) => {
+  const counts = snapshot?.readiness?.counts || {};
+  if ((counts.acceptanceCriteriaNotDetected || 0) >= (counts.missingEstimate || 0) &&
+    (counts.acceptanceCriteriaNotDetected || 0) > 0) {
+    return "Most readiness risk comes from unclear acceptance criteria and missing estimates.";
+  }
+  if ((counts.missingEstimate || 0) > 0) {
+    return "Most readiness risk comes from missing estimates and incomplete issue quality.";
+  }
+  if ((snapshot?.readinessFindings || []).length === 0) {
+    return "No high-volume readiness gaps were detected from current issue fields.";
+  }
+  return "Review the grouped readiness categories before starting more work.";
+};
+
+export const readinessIssueRows = (findings = [], issueIndex = new Map()) =>
+  (findings || []).map((finding) => {
+    const issue = issueIndex.get(finding.issueKey) || {};
+    return {
+      key: finding.issueKey,
+      summary: issue.summary || finding.issueSummary || "",
+      statusName: issue.statusName || null,
+      severity: normalizeSeverity(finding.severity),
+      evidence: finding.evidence || finding.explanation || "",
+      explanation: finding.explanation || "",
+      conversation: READINESS_CONVERSATIONS[finding.signalType] || "What is the next shared decision on this issue?",
+      why: READINESS_WHY[finding.signalType] || finding.explanation || "",
+      signalType: finding.signalType,
+      confidence: "Heuristic — not an absolute judgment.",
+    };
+  });
+
+export const filterIssueRows = (rows = [], { query = "", severity = "all" } = {}) => {
+  const needle = String(query || "").trim().toLowerCase();
+  return (rows || []).filter((row) => {
+    if (severity !== "all" && normalizeSeverity(row.severity) !== normalizeSeverity(severity)) {
+      return false;
+    }
+    if (!needle) {
+      return true;
+    }
+    return [row.key, row.summary, row.evidence, row.statusName]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(needle));
+  });
+};
+
+export const capabilityState = (capability = null, fallbackReason = "") => {
+  const status = capability?.status || (capability ? "available" : "unavailable");
+  return {
+    status,
+    reason: capability?.reason || fallbackReason || "This signal is unavailable.",
+    tone: status === "available" ? "good" : status === "partial" ? "review" : "bad",
+    label:
+      status === "available"
+        ? "Available"
+        : status === "partial"
+          ? "Partial data"
+          : "Unavailable",
+  };
+};
+
+export const paceFlow = (snapshot = null) => {
+  const counts = snapshot?.deliveryPace?.workStateCounts || {};
+  const total = counts.total || (counts.notStarted || 0) + (counts.inProgress || 0) + (counts.done || 0);
+  return {
+    notStarted: counts.notStarted || 0,
+    inProgress: counts.inProgress || 0,
+    done: counts.done || 0,
+    total,
+    elapsedPercent: snapshot?.sprintPace?.elapsedPercent,
+    remainingPercent:
+      snapshot?.sprintPace?.elapsedPercent == null
+        ? null
+        : Math.max(0, 100 - snapshot.sprintPace.elapsedPercent),
+    basis: snapshot?.sprintPace?.measurementBasis === "story_points" ? "Story points" : "Issues",
+    closed: isSprintEndPassed(snapshot?.sprint),
+  };
+};
+
+export const paceWaitingStatuses = (signals = []) =>
+  (signals || [])
+    .filter((row) => String(row.id || "").startsWith("accumulation-") || row.statusName)
+    .filter((row) => row.statusName && row.count)
+    .map((row) => ({
+      statusName: row.statusName,
+      count: row.count,
+    }));
+
+export const coachInterpretations = (snapshot = null) => {
+  const items = (snapshot?.coachingInterventions || []).filter(
+    (row) => row.category === "pace" || row.category === "readiness" || row.category === "blocked",
+  );
+  if (items.length) {
+    return items.slice(0, 3).map((row, index) => ({
+      id: row.id,
+      title: row.title,
+      summary: row.suggestedIntervention || row.interpretation,
+      index: index + 1,
+    }));
+  }
+  const groups = groupPaceSignals(snapshot?.deliveryPace?.signals || []).slice(0, 3);
+  return groups.map((group, index) => ({
+    id: group.id,
+    title: group.title,
+    summary: group.explanation,
+    index: index + 1,
+  }));
+};
+
+export const buildScopeTimeline = (snapshot = null) => {
+  const startValue = snapshot?.originalCommittedCount ?? 0;
+  const startDate = snapshot?.sprint?.activatedDate || snapshot?.sprint?.startDate;
+  const points = [
+    {
+      date: startDate || null,
+      label: "Sprint start",
+      cumulative: startValue,
+      added: 0,
+    },
+  ];
+  const dated = [...(snapshot?.addedIssues || [])]
+    .filter((row) => row.joinedAt)
+    .sort((left, right) => new Date(left.joinedAt) - new Date(right.joinedAt));
+  const byDay = new Map();
+  for (const issue of dated) {
+    const day = new Date(issue.joinedAt).toISOString().slice(0, 10);
+    byDay.set(day, (byDay.get(day) || 0) + 1);
+  }
+  let running = startValue;
+  for (const [day, added] of byDay) {
+    running += added;
+    points.push({
+      date: `${day}T00:00:00.000Z`,
+      label: day,
+      cumulative: running,
+      added,
+    });
+  }
+  const current = snapshot?.currentIssueCount ?? running;
+  if (points[points.length - 1].cumulative !== current) {
+    points.push({
+      date: snapshot?.generatedAt || null,
+      label: "Current",
+      cumulative: current,
+      added: 0,
+    });
+  }
+  return {
+    points,
+    removalsAvailable: snapshot?.capabilities?.scopeRemovals?.status === "available",
+    removalsNote:
+      snapshot?.capabilities?.scopeRemovals?.reason ||
+      "Removed / de-scoped is unavailable. Reliable removal history is not available yet.",
+  };
+};
+
+export const addedIssueRows = (snapshot = null, issueIndex = new Map()) => {
+  const compound = new Map(
+    (snapshot?.compoundRisks?.items || []).map((row) => [row.issueKey, row]),
+  );
+  const blocked = new Set((snapshot?.blockedIssues || []).map((row) => row.key));
+  const stale = new Set((snapshot?.staleIssues || []).map((row) => row.key));
+  return (snapshot?.addedIssues || snapshot?.addedIssueKeys || []).map((row) => {
+    const key = row.key || row;
+    const issue = typeof row === "object" ? row : issueIndex.get(key) || {};
+    const risk = compound.get(key);
+    return {
+      key,
+      summary: issue.summary || "",
+      joinedAt: issue.joinedAt || null,
+      estimate: issue.estimate ?? null,
+      statusName: issue.statusName || null,
+      severity: risk
+        ? normalizeSeverity(risk.attentionLevel)
+        : blocked.has(key)
+          ? "high"
+          : stale.has(key)
+            ? "review"
+            : "informational",
+      riskCodes: risk?.riskCodes || [],
+      evidence: risk?.evidence || [],
+    };
+  });
+};
+
+export const reliableSprintSeries = (snapshot = null, limit = 3) => {
+  const series = snapshot?.historicalPatterns?.sprintSeries || [];
+  const completed = series.filter((row) => !row.isCurrent && !row.partial).slice(0, limit);
+  const current = series.find((row) => row.isCurrent) || null;
+  return {
+    current,
+    completed,
+    points: [...completed].reverse().concat(current ? [current] : []),
+    capability: capabilityState(snapshot?.historicalPatterns?.capability),
+  };
+};
+
+export const suggestedExperiments = (snapshot = null) =>
+  (snapshot?.historicalPatterns?.patterns || []).slice(0, 2).map((pattern) => ({
+    id: pattern.id,
+    title: pattern.suggestedFocus || pattern.title,
+    hypothesis: pattern.interpretation,
+    evidence: pattern.evidence,
+  }));
+
+const BRIEF_HEADINGS = [
+  "Where we are",
+  "What needs attention",
+  "Suggested next moves",
+  "Executive summary",
+  "Delivery risk",
+  "Ask of leadership",
+  "Observed patterns",
+  "Discussion prompts",
+  "Coaching reminders",
+];
+
+export const filterBriefPreview = ({
+  brief = null,
+  includes = BRIEF_INCLUDE_DEFAULTS,
+  detail = "executive",
+} = {}) => {
+  if (!brief) {
+    return { title: "", sections: [], plain: "", markdown: "" };
+  }
+  const hide = new Set();
+  if (!includes.health) {
+    hide.add("where we are");
+  }
+  if (!includes.risks) {
+    hide.add("what needs attention");
+    hide.add("delivery risk");
+  }
+  if (!includes.decisions) {
+    hide.add("suggested next moves");
+    hide.add("ask of leadership");
+  }
+  if (!includes.pace && !includes.scope) {
+    hide.add("executive summary");
+  }
+  const lines = String(brief.plain || "").split("\n");
+  const sections = [];
+  let current = null;
+  for (const line of lines) {
+    if (line === brief.title) {
+      continue;
+    }
+    if (BRIEF_HEADINGS.includes(line)) {
+      if (current) {
+        sections.push(current);
+      }
+      current = { heading: line, body: [] };
+      continue;
+    }
+    if (current && line.trim()) {
+      current.body.push(line);
+    }
+  }
+  if (current) {
+    sections.push(current);
+  }
+  const kept = sections.filter((section) => !hide.has(String(section.heading || "").toLowerCase()));
+  const limited = detail === "concise" ? kept.slice(0, 2) : kept;
+  const plain = [brief.title, "", ...limited.flatMap((section) => [section.heading, ...section.body, ""])]
+    .join("\n")
+    .trim();
+  return {
+    title: brief.title,
+    sections: limited,
+    plain,
+    markdown: brief.markdown,
+  };
+};
+
+export const briefFacts = (snapshot = null) => [
+  {
+    label: "Sprint health score",
+    value: snapshot?.healthScore != null ? `${snapshot.healthScore}/100` : "unavailable",
+  },
+  {
+    label: "Completion",
+    value:
+      snapshot?.completionPercent != null
+        ? `${snapshot.completionPercent}% of ${snapshot.currentIssueCount ?? "—"} issues`
+        : "unavailable",
+  },
+  {
+    label: "Scope change",
+    value:
+      snapshot?.scopeChangePercent != null
+        ? `${snapshot.scopeChangePercent}% (${snapshot.originalCommittedCount ?? "—"} → ${
+            snapshot.currentIssueCount ?? "—"
+          })`
+        : "unavailable",
+  },
+  {
+    label: "Stale issues",
+    value: snapshot?.staleCount != null ? `${snapshot.staleCount}` : "unavailable",
+  },
+];
+
+export const jiraReferences = (snapshot = null, limit = 2) => {
+  const keys = uniqueKeys([
+    ...(snapshot?.blockedIssues || []).map((row) => row.key),
+    ...(snapshot?.compoundRisks?.items || []).map((row) => row.issueKey),
+    ...(snapshot?.addedIssueKeys || []),
+  ]);
+  return {
+    shown: keys.slice(0, limit),
+    extra: Math.max(0, keys.length - limit),
+  };
+};
+
+export const findingsFilterOptions = (snapshot = null) =>
+  [
+    { id: "all", label: "All findings", keys: [] },
+    { id: "blocked", label: "Blocked", keys: (snapshot?.blockedIssues || []).map((row) => row.key) },
+    { id: "stale", label: "Stale", keys: (snapshot?.staleIssues || []).map((row) => row.key) },
+    { id: "added", label: "Added after start", keys: snapshot?.addedIssueKeys || [] },
+    { id: "carryover", label: "Carryover", keys: snapshot?.carryoverIssueKeys || [] },
+    ...groupReadinessFindings(snapshot?.readinessFindings || []).map((group) => ({
+      id: group.id,
+      label: group.title,
+      keys: group.issueKeys,
+    })),
+  ].filter((row) => row.id === "all" || (row.keys || []).length > 0);
