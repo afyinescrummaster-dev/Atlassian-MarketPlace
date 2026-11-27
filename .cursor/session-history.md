@@ -7,6 +7,21 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-11-27 — [Delivery Intelligence] Caleb smoke header (dev 4.0.0)
+
+### Goal
+Visible pipeline smoke test: show `Caleb` above the DI dashboard title.
+
+### Done
+- Branch: `cursor/caleb-smoke-header-0bfb` from `main` / `di-v1.1.0`
+- Code SHA: `9099c72` (deployed); docs tip `1ab3b99`
+- Tests: 32/32
+- Forge development **4.0.0**; install upgraded on `one-atlas-qzzp`
+- Revision: `deploy/di/development/4.0.0`
+- Not merged to `main`
+
+---
+
 ## 2026-09-10 — [Delivery Intelligence] `di-v1.1.0` on `main`
 
 ### Goal
