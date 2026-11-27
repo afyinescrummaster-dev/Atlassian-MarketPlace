@@ -670,6 +670,7 @@ export default function App() {
   return (
     <div className="page canvas" data-ui-build={UI_BUILD}>
       <header className="product-header acrylic">
+        <div className="brand-sub">Caleb</div>
         <div className="product-header-top">
           <div className="brand">
             <div className="brand-mark" aria-hidden="true">DI</div>
