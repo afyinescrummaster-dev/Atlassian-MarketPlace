@@ -158,11 +158,13 @@ export const computeDeliveryPace = ({
     committedKeys.has(issue.key),
   );
 
+  const lateAddedNotStarted = notStartedIssues.filter((issue) =>
+    addedKeys.has(issue.key),
+  ).length;
   const notStartedSignal = {
     count: notStartedIssues.length,
     committedCount: notStartedCommitted.length,
-    lateAddedCount: notStartedIssues.filter((issue) => addedKeys.has(issue.key))
-      .length,
+    lateAddedCount: lateAddedNotStarted,
     issueKeys: notStartedIssues.map((issue) => issue.key),
     urgency:
       elapsed.elapsedShare != null &&
@@ -170,14 +172,26 @@ export const computeDeliveryPace = ({
       notStartedCommitted.length >= 2
         ? ATTENTION_LEVEL.HIGH
         : ATTENTION_LEVEL.MEDIUM,
-    explanation:
-      elapsed.elapsedPercent != null && notStartedCommitted.length > 0
-        ? `${elapsed.elapsedPercent}% of the sprint has elapsed, but ${notStartedCommitted.length} committed issue${
-            notStartedCommitted.length === 1 ? " has" : "s have"
-          } not started.`
-        : `${notStartedIssues.length} issue${
-            notStartedIssues.length === 1 ? "" : "s"
-          } remain in a To Do status category.`,
+    explanation: (() => {
+      if (notStartedIssues.length === 0) {
+        return "No issues remain in a To Do status category.";
+      }
+      const total = notStartedIssues.length;
+      const totalLabel = `${total} issue${total === 1 ? "" : "s"} remain in To Do (flow total)`;
+      const breakdown =
+        notStartedCommitted.length > 0 || lateAddedNotStarted > 0
+          ? `: ${notStartedCommitted.length} from original commitment${
+              lateAddedNotStarted > 0
+                ? `, ${lateAddedNotStarted} added after start`
+                : ""
+            }`
+          : "";
+      const prefix =
+        elapsed.elapsedPercent != null
+          ? `${elapsed.elapsedPercent}% of the sprint has elapsed. `
+          : "";
+      return `${prefix}${totalLabel}${breakdown}.`;
+    })(),
   };
 
   const highWip =
@@ -190,6 +204,7 @@ export const computeDeliveryPace = ({
     completedCount: doneIssues.length,
     notStartedCount: notStartedIssues.length,
     highWip,
+    issueKeys: inProgressIssues.map((issue) => issue.key),
     explanation: highWip
       ? `${inProgressIssues.length} issues are in progress and ${doneIssues.length} are complete. Consider finishing active work before starting additional issues.`
       : `${inProgressIssues.length} issue${

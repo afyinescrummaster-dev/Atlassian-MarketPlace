@@ -30,13 +30,16 @@ export default function ReadinessView({
   const [query, setQuery] = useState("");
   const [severity, setSeverity] = useState("all");
   const [selectedKey, setSelectedKey] = useState(null);
+  const [drawerDismissed, setDrawerDismissed] = useState(false);
 
   const activeGroup = groups.find((row) => row.groupId === category) || groups[0];
   const rows = useMemo(() => {
     const source = activeGroup?.findings || [];
     return filterIssueRows(readinessIssueRows(source, issueIndex), { query, severity });
   }, [activeGroup, issueIndex, query, severity]);
-  const selected = rows.find((row) => row.key === selectedKey) || rows[0] || null;
+  const selected = drawerDismissed
+    ? null
+    : rows.find((row) => row.key === selectedKey) || rows[0] || null;
   const columns = [
     { id: "key", label: "Issue" },
     { id: "summary", label: "Summary" },
@@ -99,6 +102,7 @@ export default function ReadinessView({
                 onClick={() => {
                   setCategory(group.groupId);
                   setSelectedKey(null);
+                  setDrawerDismissed(false);
                 }}
               >
                 <span>{READINESS_NAV_LABELS[group.groupId] || group.title}</span>
@@ -132,12 +136,27 @@ export default function ReadinessView({
               <option value="review">Review</option>
               <option value="informational">Info</option>
             </select>
+            {severity !== "all" ? (
+              <span className="filter-chip" role="status">
+                Severity: {severity}
+                <button
+                  className="text-link inline"
+                  type="button"
+                  onClick={() => setSeverity("all")}
+                >
+                  Clear filter
+                </button>
+              </span>
+            ) : null}
           </div>
           <IssueTable
             columns={columns}
             rows={rows}
             selectedKey={selected?.key}
-            onSelect={(row) => setSelectedKey(row.key)}
+            onSelect={(row) => {
+              setDrawerDismissed(false);
+              setSelectedKey(row.key);
+            }}
             empty="No issues match this readiness category."
             pageSize={10}
           />
@@ -148,6 +167,10 @@ export default function ReadinessView({
           meta={selected ? selected.summary : null}
           canOpenJira={Boolean(selected?.key)}
           canAskRovo={Boolean(selected?.key)}
+          onClose={() => {
+            setDrawerDismissed(true);
+            setSelectedKey(null);
+          }}
           onOpenJira={() => onOpenIssue(selected?.key)}
           onAskRovo={() =>
             onAskRovo(

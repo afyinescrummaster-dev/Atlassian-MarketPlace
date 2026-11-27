@@ -50,9 +50,14 @@ export default function ScopeView({
   );
   const compounds = snapshot?.compoundRisks?.items || [];
   const [selectedKey, setSelectedKey] = useState(rows[0]?.key || compounds[0]?.issueKey || null);
-  const selectedRow = rows.find((row) => row.key === selectedKey);
-  const selectedCompound = compounds.find((row) => row.issueKey === selectedKey);
-  const selectedIssue = issueIndex.get(selectedKey);
+  const [drawerDismissed, setDrawerDismissed] = useState(false);
+  const selectedRow = drawerDismissed
+    ? null
+    : rows.find((row) => row.key === selectedKey);
+  const selectedCompound = drawerDismissed
+    ? null
+    : compounds.find((row) => row.issueKey === selectedKey);
+  const selectedIssue = selectedKey && !drawerDismissed ? issueIndex.get(selectedKey) : null;
 
   return (
     <section className="detail-page">
@@ -73,7 +78,7 @@ export default function ScopeView({
               <div className="n">{snapshot.addedIssueCount ?? "—"}</div>
               <div className="l">Added after start</div>
             </div>
-            <span className="scope-op">=</span>
+            <span className="scope-op">→</span>
             <div className="scope-stat">
               <div className="n">{snapshot.currentIssueCount ?? "—"}</div>
               <div className="l">Current scope</div>
@@ -82,7 +87,7 @@ export default function ScopeView({
               <div className="n">
                 {snapshot.scopeChangePercent == null ? "—" : `+${snapshot.scopeChangePercent}%`}
               </div>
-              <div className="l">Scope growth</div>
+              <div className="l">Additions growth</div>
             </div>
           </div>
           <p className="note">{timeline.removalsNote}</p>
@@ -126,7 +131,10 @@ export default function ScopeView({
                   <button
                     className={`risk-item ${selectedKey === item.issueKey ? "active" : ""}`}
                     type="button"
-                    onClick={() => setSelectedKey(item.issueKey)}
+                    onClick={() => {
+                      setDrawerDismissed(false);
+                      setSelectedKey(item.issueKey);
+                    }}
                   >
                     <div>
                       <strong>{item.issueKey}</strong>
@@ -157,7 +165,10 @@ export default function ScopeView({
           columns={columns}
           rows={rows}
           selectedKey={selectedKey}
-          onSelect={(row) => setSelectedKey(row.key)}
+          onSelect={(row) => {
+            setDrawerDismissed(false);
+            setSelectedKey(row.key);
+          }}
           empty="No issues were added after sprint start."
         />
       </div>
@@ -178,6 +189,10 @@ export default function ScopeView({
         }
         canOpenJira={Boolean(selectedKey)}
         canAskRovo={Boolean(selectedKey)}
+        onClose={() => {
+          setDrawerDismissed(true);
+          setSelectedKey(null);
+        }}
         onOpenJira={() => (selectedKey ? onOpenIssue(selectedKey) : onOpenKeys([]))}
         onAskRovo={() =>
           onAskRovo(

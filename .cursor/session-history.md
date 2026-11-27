@@ -7,6 +7,49 @@ Update this file at the end of meaningful sessions.
 
 ---
 
+## 2026-11-27 — [Delivery Intelligence] Gate 1 stabilization round 1
+
+### Goal
+Sparky CONDITIONAL GO — Gate 1 product-acceptance defect/validation round.
+Freeze features. Branch off Fluent tip, draft PR vs Fluent, deploy+upgrade
+on `one-atlas-qzzp`, do not merge.
+
+### Branch
+`cursor/di-stabilization-round-1-0bfb` from `feature/di-fluent-overview`
+@ `278da8a` (Forge 5.1.0 / UI 2.13.0).
+
+### Defects fixed
+- **D1 P0** Rovo silent failure → `resolveRovoHandoff` + clear notes on all
+  entry points; resolver compact snapshot unit tests
+- **D4** high WIP affected count shared source (`issueKeys` + `affectedIssueCount`)
+- **D3** work_not_started evidence labels flow total vs commitment
+- **D5** scope chart uses local calendar day (not UTC `toISOString`)
+- **D2** briefs map pacing enums via `pacingStateLabel`
+- **D9/D7** EvidenceDrawer Close + Escape; overflow menu Escape/close-after-action
+- **D8** readiness severity filter chip + Clear filter
+- **D6** learning series axis human labels
+- Tone control disabled / “not available yet”
+- Removals wording: additions growth, not net scope
+- PLAT 8+5=62.5% regression test — **PASS**
+- Docs synced to Fluent/UI 2.13.0 reality (D10)
+
+### Sprint goal investigation (no behaviour change)
+- Retrieved: yes — `agile-client` maps `sprint.goal`
+- Displayed: no — UI never renders goal text; readiness voids `sprint.goal`
+- Missing-goal detection would need an informational-only surface; must not
+  affect health/readiness scoring (standing rule)
+
+### Tests
+81/81 passing (`npm test` in `apps/delivery-intelligence`)
+
+### Deploy
+- Forge development **5.2.0** (`deploy/di/development/5.2.0`) @ `5069b8f`
+- Install on `one-atlas-qzzp`: already at latest after deploy
+- Tests: 81/81; dashboard build clean; forge lint clean
+- Working tree was clean at deploy; build artifacts not committed
+
+---
+
 ## 2026-09-21 — [Delivery Intelligence] Fluent Overview restyle (dev 3.4.0)
 
 ### Goal

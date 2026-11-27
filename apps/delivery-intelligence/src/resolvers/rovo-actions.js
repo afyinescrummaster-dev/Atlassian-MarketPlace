@@ -21,7 +21,7 @@ const compactAnomaly = (item) => ({
   suggestedAction: item.suggestedAction || null,
 });
 
-const compactSnapshot = (snapshot) => {
+export const compactSnapshotForRovo = (snapshot) => {
   if (!snapshot) {
     return null;
   }
@@ -126,7 +126,7 @@ export const getSprintHealthSnapshot = async (payload) => {
     return { error: result.error || "unavailable" };
   }
 
-  return compactSnapshot(result.snapshot);
+  return compactSnapshotForRovo(result.snapshot);
 };
 
 export const getIssueDeliveryContext = async (payload) => {

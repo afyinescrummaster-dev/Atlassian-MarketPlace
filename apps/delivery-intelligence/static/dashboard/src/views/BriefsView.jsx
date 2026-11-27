@@ -72,10 +72,17 @@ export default function BriefsView({
           </label>
           <label className="field">
             <span>Tone</span>
-            <select value={tone} onChange={(event) => setTone(event.target.value)}>
+            <select
+              value={tone}
+              onChange={(event) => setTone(event.target.value)}
+              disabled
+              aria-disabled="true"
+              title="Tone rewriting is not available yet"
+            >
               <option value="concise">Concise</option>
               <option value="direct">Direct</option>
             </select>
+            <span className="note">Tone rewriting is not available yet — briefs use a fixed coaching voice.</span>
           </label>
           <label className="field">
             <span>Detail level</span>

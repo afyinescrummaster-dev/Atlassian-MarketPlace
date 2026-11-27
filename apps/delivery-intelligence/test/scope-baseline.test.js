@@ -92,6 +92,41 @@ test("scenario 2: one genuine post-start addition is 12.5% of original 8", () =>
   assert.equal(scope.scopeChangePercent, 12.5);
 });
 
+test("PLAT acceptance regression: 8 original + 5 added = 62.5% scope growth", () => {
+  const committed = Array.from({ length: 8 }, (_, index) => issue(`PLAT-${index + 1}`));
+  const added = Array.from({ length: 5 }, (_, index) => issue(`PLAT-${index + 9}`));
+  const changelogsByKey = {
+    ...Object.fromEntries(committed.map((row) => [row.key, assignBeforeStart()])),
+    ...Object.fromEntries(
+      added.map((row) => [
+        row.key,
+        [
+          {
+            at: "2026-08-04T10:00:00.000Z",
+            from: null,
+            to: sprint.name,
+            fromId: null,
+            toId: String(sprint.id),
+          },
+        ],
+      ]),
+    ),
+  };
+
+  const scope = computeScopeChange({
+    issues: [...committed, ...added],
+    sprintStart: sprint.startDate,
+    sprintName: sprint.name,
+    sprintId: sprint.id,
+    changelogsByKey,
+  });
+
+  assert.equal(scope.originalCommittedCount, 8);
+  assert.equal(scope.addedIssueCount, 5);
+  assert.equal(scope.currentIssueCount, 13);
+  assert.equal(scope.scopeChangePercent, 62.5);
+});
+
 test("scenario 3: five additions against original 10 is 50%", () => {
   const committed = Array.from({ length: 10 }, (_, index) => issue(`PLAT-${index + 1}`));
   const added = Array.from({ length: 5 }, (_, index) => issue(`PLAT-${index + 11}`));

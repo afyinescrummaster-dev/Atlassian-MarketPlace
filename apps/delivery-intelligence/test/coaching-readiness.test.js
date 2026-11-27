@@ -286,6 +286,70 @@ test("computeDeliveryPace reports transparent elapsed vs completed", () => {
   assert.ok(pace.agingWork.items.some((row) => row.issueKey === "PAY-3"));
 });
 
+test("work_not_started evidence labels flow total vs original commitment", () => {
+  const manyTodo = Array.from({ length: 7 }, (_, index) => ({
+    key: `PAY-C${index + 1}`,
+    summary: `Committed todo ${index + 1}`,
+    statusCategoryKey: "new",
+    statusName: "To Do",
+    updated: "2026-08-10T09:00:00.000Z",
+  }));
+  const addedTodo = Array.from({ length: 4 }, (_, index) => ({
+    key: `PAY-A${index + 1}`,
+    summary: `Added todo ${index + 1}`,
+    statusCategoryKey: "new",
+    statusName: "To Do",
+    updated: "2026-08-10T09:00:00.000Z",
+  }));
+  const pace = computeDeliveryPace({
+    issues: [...manyTodo, ...addedTodo],
+    sprint,
+    scope: {
+      addedIssueKeys: addedTodo.map((row) => row.key),
+      originalCommittedIssueKeys: manyTodo.map((row) => row.key),
+      addedIssues: [],
+      capability: { status: "available", reason: "ok" },
+    },
+    blocked: { blockedIssues: [] },
+    statusHistoriesByKey: {},
+    now: new Date("2026-08-12T12:00:00.000Z"),
+  });
+
+  const signal = pace.signals.find((row) => row.id === "work_not_started");
+  assert.ok(signal);
+  assert.equal(signal.count, 11);
+  assert.equal(signal.committedCount, 7);
+  assert.match(signal.explanation, /11 issues remain in To Do \(flow total\)/);
+  assert.match(signal.explanation, /7 from original commitment/);
+  assert.match(signal.explanation, /4 added after start/);
+});
+
+test("high_wip signal includes issueKeys for affected-count parity", () => {
+  const inProgress = Array.from({ length: 4 }, (_, index) => ({
+    key: `PAY-W${index + 1}`,
+    summary: `WIP ${index + 1}`,
+    statusCategoryKey: "indeterminate",
+    statusName: "In Progress",
+    updated: "2026-08-10T09:00:00.000Z",
+  }));
+  const pace = computeDeliveryPace({
+    issues: inProgress,
+    sprint,
+    scope: {
+      addedIssueKeys: [],
+      originalCommittedIssueKeys: inProgress.map((row) => row.key),
+      addedIssues: [],
+      capability: { status: "available", reason: "ok" },
+    },
+    blocked: { blockedIssues: [] },
+    statusHistoriesByKey: {},
+    now: new Date("2026-08-12T12:00:00.000Z"),
+  });
+  const signal = pace.signals.find((row) => row.id === "high_wip");
+  assert.ok(signal);
+  assert.deepEqual(signal.issueKeys, ["PAY-W1", "PAY-W2", "PAY-W3", "PAY-W4"]);
+});
+
 test("computeCompoundRisks escalates carryover plus blocked to critical", () => {
   const compound = computeCompoundRisks({
     issues: [
@@ -401,9 +465,53 @@ test("buildBriefs returns plain and markdown for team, leadership, and retro", (
 
   assert.match(briefs.teamUpdate.plain, /Team update/);
   assert.match(briefs.teamUpdate.markdown, /^# /m);
+  assert.match(briefs.teamUpdate.plain, /pacing watch/i);
   assert.match(briefs.leadershipBrief.plain, /Leadership brief/);
   assert.match(briefs.retrospectiveSummary.plain, /Retrospective summary/);
   assert.match(briefs.retrospectiveSummary.plain, /not individual performance/i);
+});
+
+test("briefs never leak raw pacing-state enums into generated text", () => {
+  const briefs = buildBriefs({
+    snapshotCore: {
+      context: { projectKey: "PAY" },
+      sprint: { name: "Sprint 12" },
+      healthScore: 40,
+      healthStatus: "Needs Attention",
+      completionPercent: 10,
+      originalCommittedCount: 8,
+      currentIssueCount: 8,
+      addedIssueCount: 0,
+      scopeChangePercent: 0,
+      carryoverCount: 0,
+      blockedCount: 0,
+      staleCount: 0,
+    },
+    readiness: { assessment: "Needs attention", counts: {} },
+    pace: {
+      sprintPace: {
+        elapsedPercent: 80,
+        pacingState: "behind_current_pace",
+      },
+    },
+    compoundRisks: { counts: {}, items: [] },
+    coachingInterventions: [],
+    historicalPatterns: { patterns: [] },
+    retrospectiveQuestions: { questions: [] },
+  });
+
+  const texts = [
+    briefs.teamUpdate.plain,
+    briefs.teamUpdate.markdown,
+    briefs.leadershipBrief.plain,
+    briefs.leadershipBrief.markdown,
+    briefs.retrospectiveSummary.plain,
+    briefs.retrospectiveSummary.markdown,
+  ].join("\n");
+
+  assert.match(texts, /behind current pace/i);
+  assert.equal(texts.includes("behind_current_pace"), false);
+  assert.equal(texts.includes("on_pace"), false);
 });
 
 test("buildHealthSnapshot adds coaching sections without changing health score", () => {

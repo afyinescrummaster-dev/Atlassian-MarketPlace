@@ -1,5 +1,5 @@
 import { CAPABILITY_STATUS } from "./constants.js";
-import { ATTENTION_LEVEL, PACING_STATE } from "./thresholds.js";
+import { ATTENTION_LEVEL, PACING_STATE, pacingStateLabel } from "./thresholds.js";
 
 const line = (text) => (text ? `${text}\n` : "");
 
@@ -70,9 +70,9 @@ export const buildBriefs = ({
           `Project ${projectKey}, sprint ${sprintName}.`,
           `Health ${health}. Completion ${snapshotCore?.completionPercent ?? "—"}%.`,
           pace?.sprintPace?.elapsedPercent != null
-            ? `Sprint time elapsed ${pace.sprintPace.elapsedPercent}%; pacing state ${
-                pace.sprintPace.pacingState || "unavailable"
-              }.`
+            ? `Sprint time elapsed ${pace.sprintPace.elapsedPercent}%; pacing ${pacingStateLabel(
+                pace.sprintPace.pacingState,
+              )}.`
             : null,
           readiness?.assessment
             ? `Readiness assessment: ${readiness.assessment}.`

@@ -200,6 +200,24 @@ export const groupReadinessFindings = (findings = []) => {
   return [...groups.values()].sort(bySeverityThenCount);
 };
 
+/** Shared affected-issue count for pace signal groups (table + evidence drawer). */
+export const affectedIssueCount = (group = null) => {
+  if (!group) {
+    return 0;
+  }
+  if (group.issueKeys?.length) {
+    return group.issueKeys.length;
+  }
+  const signal = group.signals?.[0] || {};
+  if (signal.inProgressCount != null) {
+    return signal.inProgressCount;
+  }
+  if (signal.count != null) {
+    return signal.count;
+  }
+  return group.count || 0;
+};
+
 export const groupPaceSignals = (signals = []) => {
   const groups = new Map();
 
@@ -237,7 +255,54 @@ export const groupPaceSignals = (signals = []) => {
     push(id || "pace", PACE_SIGNAL_TITLES[id] || readableSignalTitle(id), signal);
   }
 
-  return [...groups.values()].sort(bySeverityThenCount);
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      affectedCount: affectedIssueCount(group),
+    }))
+    .sort(bySeverityThenCount);
+};
+
+/** Local calendar YYYY-MM-DD — avoids UTC day-shift from toISOString(). */
+export const localCalendarDayKey = (value) => {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+/** Human chart axis label for a YYYY-MM-DD key (e.g. 8/27). */
+export const formatChartDayLabel = (dayKey) => {
+  if (!dayKey || !/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) {
+    return dayKey || "";
+  }
+  const [, , month, day] = dayKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return `${Number(month)}/${Number(day)}`;
+};
+
+/** Human axis label for learning sprint-series points. */
+export const formatSeriesAxisLabel = (point = {}) => {
+  if (point.isCurrent) {
+    return "Current";
+  }
+  const name = point.sprintName != null ? String(point.sprintName).trim() : "";
+  const looksIso = /^\d{4}-\d{2}-\d{2}/.test(name);
+  if (name && !looksIso) {
+    return name.length > 18 ? `${name.slice(0, 16)}…` : name;
+  }
+  const raw = point.completeDate || name || null;
+  if (!raw) {
+    return "Sprint";
+  }
+  const day = localCalendarDayKey(raw) || String(raw).slice(0, 10);
+  return formatChartDayLabel(day) || "Sprint";
 };
 
 export const overviewReadinessCounts = (readiness = null) => {
@@ -781,15 +846,19 @@ export const buildScopeTimeline = (snapshot = null) => {
     .sort((left, right) => new Date(left.joinedAt) - new Date(right.joinedAt));
   const byDay = new Map();
   for (const issue of dated) {
-    const day = new Date(issue.joinedAt).toISOString().slice(0, 10);
+    const day = localCalendarDayKey(issue.joinedAt);
+    if (!day) {
+      continue;
+    }
     byDay.set(day, (byDay.get(day) || 0) + 1);
   }
   let running = startValue;
   for (const [day, added] of byDay) {
     running += added;
     points.push({
-      date: `${day}T00:00:00.000Z`,
-      label: day,
+      date: `${day}T12:00:00.000Z`,
+      label: formatChartDayLabel(day),
+      dayKey: day,
       cumulative: running,
       added,
     });
@@ -803,12 +872,22 @@ export const buildScopeTimeline = (snapshot = null) => {
       added: 0,
     });
   }
+  const removalsAvailable =
+    snapshot?.capabilities?.scopeRemovals?.status === "available";
+  const capabilityReason = snapshot?.capabilities?.scopeRemovals?.reason || "";
+  const defaultRemovalsNote =
+    "Removed / de-scoped history is unavailable, so growth reflects additions only — not a net scope change.";
+  const removalsNote = removalsAvailable
+    ? capabilityReason || "Removed / de-scoped history is available."
+    : /net scope change/i.test(capabilityReason)
+      ? capabilityReason
+      : capabilityReason
+        ? `${capabilityReason.replace(/\.*$/, "")} — growth reflects additions only, not a net scope change.`
+        : defaultRemovalsNote;
   return {
     points,
-    removalsAvailable: snapshot?.capabilities?.scopeRemovals?.status === "available",
-    removalsNote:
-      snapshot?.capabilities?.scopeRemovals?.reason ||
-      "Removed / de-scoped is unavailable. Reliable removal history is not available yet.",
+    removalsAvailable,
+    removalsNote,
   };
 };
 
