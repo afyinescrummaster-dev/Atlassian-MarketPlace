@@ -173,18 +173,28 @@ test("detail views use the Jira product-page chrome instead of stacked cards", (
   const scope = readFileSync(join(root, "../static/dashboard/src/views/ScopeView.jsx"), "utf8");
   const learning = readFileSync(join(root, "../static/dashboard/src/views/LearningView.jsx"), "utf8");
   const briefs = readFileSync(join(root, "../static/dashboard/src/views/BriefsView.jsx"), "utf8");
+  const kit = readFileSync(join(root, "../static/dashboard/src/components/DashboardKit.jsx"), "utf8");
   assert.match(app, /className="page canvas"/);
   assert.match(app, /command-bar/);
   assert.match(app, /seg-nav|ProductNav/);
+  assert.match(app, /resolveRovoHandoff/);
+  assert.match(app, /keydown/);
   assert.match(overview, /Delivery outlook/);
   assert.match(overview, /Recommended now/);
   assert.match(overview, /Sprint flow/);
   assert.match(overview, /Focus queue/);
+  assert.match(overview, /Additions growth/);
+  assert.match(overview, /not a net scope change/);
   assert.match(readiness, /readiness-hero/);
+  assert.match(readiness, /Clear filter/);
   assert.match(pace, /pace-workspace/);
+  assert.match(pace, /affectedIssueCount/);
   assert.match(scope, /ScopeLine/);
   assert.match(learning, /SeriesSpark/);
   assert.match(briefs, /briefs-studio/);
+  assert.match(briefs, /Tone rewriting is not available yet/);
+  assert.match(kit, /Close details/);
+  assert.match(kit, /Escape/);
 });
 
 test("Rovo is never auto-invoked from dashboard load", () => {

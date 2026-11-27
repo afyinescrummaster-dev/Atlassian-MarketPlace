@@ -3,13 +3,18 @@ import assert from "node:assert/strict";
 import {
   DASHBOARD_TABS,
   READINESS_NAV_LABELS,
+  affectedIssueCount,
   allFindingsCount,
   attentionLevelLabel,
   buildCoachAttentionItems,
+  buildScopeTimeline,
+  formatChartDayLabel,
+  formatSeriesAxisLabel,
   groupPaceSignals,
   groupReadinessFindings,
   isInternalSignalId,
   isSprintEndPassed,
+  localCalendarDayKey,
   overviewReadinessCounts,
   paceHeadline,
   paceSummaryCopy,
@@ -147,6 +152,51 @@ test("pace signals group aging work and never expose internal ids", () => {
     groups.some((row) => String(row.title).includes("aging-PLAT")),
     false,
   );
+});
+
+test("high WIP affected count is shared between table and evidence drawer", () => {
+  const groups = groupPaceSignals([
+    {
+      id: "high_wip",
+      severity: "high",
+      explanation: "Too much WIP.",
+      inProgressCount: 4,
+      issueKeys: ["PLAT-1", "PLAT-2", "PLAT-3", "PLAT-4"],
+    },
+  ]);
+  const highWip = groups.find((row) => row.groupId === "high_wip");
+  assert.equal(highWip.count, 1);
+  assert.equal(affectedIssueCount(highWip), 4);
+  assert.equal(highWip.affectedCount, 4);
+  assert.equal(highWip.issueKeys.length, 4);
+});
+
+test("scope timeline uses local calendar days and human chart labels", () => {
+  const joinedAt = "2026-08-27T18:30:00.000Z";
+  const dayKey = localCalendarDayKey(joinedAt);
+  const timeline = buildScopeTimeline({
+    originalCommittedCount: 8,
+    currentIssueCount: 9,
+    sprint: { startDate: "2026-08-20T09:00:00.000Z" },
+    addedIssues: [{ key: "PLAT-9", joinedAt }],
+    capabilities: {
+      scopeRemovals: { status: "unavailable", reason: "Removed / de-scoped is unavailable." },
+    },
+  });
+  const step = timeline.points.find((row) => row.added === 1);
+  assert.ok(step);
+  assert.equal(step.dayKey, dayKey);
+  assert.equal(step.label, formatChartDayLabel(dayKey));
+  assert.match(timeline.removalsNote, /net scope change/i);
+});
+
+test("learning series axis labels are human-readable, not raw ISO timestamps", () => {
+  assert.equal(formatSeriesAxisLabel({ isCurrent: true }), "Current");
+  assert.equal(
+    formatSeriesAxisLabel({ sprintName: "2026-08-15T17:00:00.000Z", completeDate: "2026-08-15T17:00:00.000Z" }),
+    formatChartDayLabel(localCalendarDayKey("2026-08-15T17:00:00.000Z")),
+  );
+  assert.equal(formatSeriesAxisLabel({ sprintName: "Sprint Alpha" }), "Sprint Alpha");
 });
 
 test("coach attention consolidates stale and blocked work and keeps only the top 3", () => {

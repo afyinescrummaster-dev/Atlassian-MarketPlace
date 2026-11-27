@@ -1,13 +1,15 @@
 # Delivery Intelligence for Jira
 
 Working product name: **Delivery Intelligence for Jira**  
-Version: **1.1.0+** — Sprint Coaching / Readiness (working increment on
-`feature/sprint-coaching-readiness`; not an official `di-v*` tag yet)  
+Version: **1.1.0+** — Fluent overview + Gate 1 stabilization (working
+increment; not an official `di-v*` tag yet)  
 Forge app location: `apps/delivery-intelligence/`  
 Status: **`di-v1.1.0`** remains the latest official milestone on `main`
-(Sprint Intelligence). This branch evolves DI into an evidence-based
-Agile coaching assistant. Live Forge development **3.0.0**
-(`deploy/di/development/3.0.0`, UI Build `2.10.0`). V1 baseline
+(Sprint Intelligence). Active test line is `feature/di-fluent-overview`
+(Fluent UI Build **2.13.0**). Gate 1 defect round:
+`cursor/di-stabilization-round-1-0bfb` (draft PR vs Fluent; do not merge).
+Live Forge development before this round: **5.1.0**
+(`deploy/di/development/5.1.0`, UI Build `2.13.0`). V1 baseline
 `di-v1.0.0` @ `c780ff5` remains. Historical recovered known-good remains
 `di-v0.1.1` @ `4f44eb3` — do not delete.
 See `docs/RECOVERY-2.8.0.md`. Working rules: `AGENTS.md`. Deploy log:
@@ -34,30 +36,23 @@ and increasingly: **What should the team clarify, finish, or learn next?**
 
 ---
 
-## Working increment — Sprint Coaching / Readiness
+## Working increment — Fluent overview + Gate 1 stabilization
 
-Branch: `feature/sprint-coaching-readiness` (do not merge until accepted;
+Base branch: `feature/di-fluent-overview` (do not merge until accepted;
 do not create a `di-v*` tag unless the user names one).
 
-Adds deterministic coaching layers on the `di-v1.1.0` baseline:
+Stabilization branch: `cursor/di-stabilization-round-1-0bfb` — defects and
+validation only (Sparky CONDITIONAL GO / Gate 1). Features frozen.
 
-- Sprint readiness (description quality, cautious AC detection, estimates,
-  assignees, blockers, carryover, stale-at-start, large-issue heuristic,
-  dependency context)
-- Delivery pace (elapsed vs completed, WIP, aging, blocker duration,
-  late additions, status churn / reopen, workflow accumulation, ownership
-  concentration as a review signal — not performance language)
-- Compound per-issue risks with attention levels
-  `critical` / `high` / `medium` / `informational`
-- Coaching interventions that separate **Evidence / Interpretation /
-  Suggested intervention**
-- Historical patterns across up to 3 completed sprints
-- Retrospective questions
-- Brief builder: Team Update / Leadership Brief / Retrospective Summary
-  (copy plain, copy markdown, open in Rovo)
-- Dashboard UI Build `2.10.0` sections: Sprint Diagnosis, Sprint Readiness,
-  Delivery Pace, Scope and Risk, Coach's Attention, Learning Across Sprints,
-  Brief Builder / AI Actions
+Product surface (UI Build **2.13.0**):
+
+- Tabs: Overview, Readiness, Delivery Pace, Scope & Risk, Learning, Briefs
+- Coach’s Attention folded into Overview (focus queue / recommended now)
+- Deterministic coaching layers on the `di-v1.1.0` baseline:
+  readiness, delivery pace, compound risks, coaching interventions,
+  historical patterns, retrospective questions, brief builder
+- Rovo handoff is manual only; every entry point must open Rovo or show a
+  clear unavailable/error note (no silent failure)
 
 **Hard rules preserved**
 

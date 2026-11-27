@@ -73,7 +73,7 @@ export default function OverviewView({
                   onClick={() => showDrilldown("added")}
                 >
                   <strong>{formatSigned(snapshot.scopeChangePercent, "%")}</strong>
-                  <span>Scope growth</span>
+                  <span>Additions growth</span>
                 </button>
                 <button
                   className={`metric-chip ${drilldown === "stale" ? "active" : ""}`}
@@ -142,14 +142,14 @@ export default function OverviewView({
             <strong>{formatMetric(snapshot.addedIssueCount)}</strong>
             <span>Added after start</span>
           </button>
-          <span aria-hidden="true">=</span>
+          <span aria-hidden="true">→</span>
           <button type="button" onClick={() => showDrilldown("completion")}>
             <strong>{formatMetric(snapshot.currentIssueCount)}</strong>
             <span>Current scope</span>
           </button>
           <button className="growth" type="button" onClick={() => showDrilldown("added")}>
             <strong>{formatSigned(snapshot.scopeChangePercent, "%")}</strong>
-            <span>Scope growth</span>
+            <span>Additions growth</span>
           </button>
           <div className="elapsed">
             <span>{flow.elapsedPercent ?? "—"}% of sprint time elapsed</span>
@@ -161,6 +161,10 @@ export default function OverviewView({
         </div>
         <FlowTrack notStarted={flow.notStarted} inProgress={flow.inProgress} done={flow.done} />
       </div>
+      <p className="note page-note">
+        Additions growth uses original commitment as the denominator. Removed / de-scoped
+        history is unavailable, so this is not a net scope change.
+      </p>
 
       <div className="split-hero">
         <Surface tone="plain" className="focus-queue">

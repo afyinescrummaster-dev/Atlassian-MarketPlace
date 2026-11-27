@@ -33,13 +33,14 @@ GitHub plus these files are the durable memory. Fetch and inspect remote
 state before changing or deploying. Do not invent release tags; the user
 names them.
 
-## Status (2026-09-10) — `di-v1.1.0` Sprint Intelligence
+## Status (2026-11-27) — Fluent overview + Gate 1 stabilization
 
-**Current product milestone:** `di-v1.1.0` — Sprint Intelligence
-(Scope Movement, attention items, drill-downs, current vs previous
-sprint, distinct Rovo intents). Live Forge development **2.18.0**
-(`deploy/di/development/2.18.0`). V1 baseline `di-v1.0.0` @ `c780ff5`
-remains the prior official milestone.
+**Official milestone on `main`:** `di-v1.1.0` — Sprint Intelligence.
+**Active test line:** `feature/di-fluent-overview` (UI Build **2.13.0**).
+**Gate 1 defect round:** `cursor/di-stabilization-round-1-0bfb` (draft PR
+vs Fluent; do not merge). Live Forge development before Gate 1 deploy:
+**5.1.0** (`deploy/di/development/5.1.0`). V1 baseline `di-v1.0.0` @
+`c780ff5` remains the prior official milestone.
 
 **Historical recovered known-good:** `di-v0.1.1` → `4f44eb3` → Forge
 **2.13.0** → PLAT accepted. Keep this tag.

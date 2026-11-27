@@ -3,8 +3,10 @@
 This file is the handoff for Cursor mobile or a remote agent. Read it before
 changing the Forge app. Do not invent missing Jira fields or sample metrics.
 
-Last updated: 2026-09-21 (`feature/di-fluent-overview` → Forge
-development **3.4.0**; official milestone on `main` remains `di-v1.1.0`)
+Last updated: 2026-11-27 (Gate 1 stabilization on
+`cursor/di-stabilization-round-1-0bfb` off Fluent; Fluent tip was Forge
+development **5.1.0** / UI Build **2.13.0**; official milestone on `main`
+remains `di-v1.1.0`)
 
 ## What this repo is
 
@@ -20,14 +22,14 @@ See **`docs/PRODUCT-INDEX.md`** before editing.
 - Demo site: `https://one-atlas-qzzp.atlassian.net` (active until 2026-11-18)
 - Latest known deploy: development **4.8.0** (Jira Admin Health v0.4 boxed Custom UI)
 - Delivery Intelligence **`di-v1.1.0`** — Sprint Intelligence, on
-  `main`. Working branch `feature/di-fluent-overview` is live Forge
-  development **3.4.0** (`deploy/di/development/3.4.0`, UI Build `2.13.0`).
-  V1 baseline
-  `di-v1.0.0` @ `c780ff5` remains. Historical recovered known-good
-  `di-v0.1.1` @ `4f44eb3` is kept. See `docs/RECOVERY-2.8.0.md` and
-  `docs/DEPLOYMENT-MODEL.md`. Deploy: `./scripts/forge-deploy.sh`.
-  Rollback: `./scripts/rollback-deployment.sh`. History:
-  `docs/deployments.jsonl`.
+  `main`. Active test line `feature/di-fluent-overview` (UI Build
+  `2.13.0`); Gate 1 defect round `cursor/di-stabilization-round-1-0bfb`
+  (draft PR vs Fluent, do not merge). Fluent tip before Gate 1 was Forge
+  development **5.1.0**. V1 baseline `di-v1.0.0` @ `c780ff5` remains.
+  Historical recovered known-good `di-v0.1.1` @ `4f44eb3` is kept. See
+  `docs/RECOVERY-2.8.0.md` and `docs/DEPLOYMENT-MODEL.md`. Deploy:
+  `./scripts/forge-deploy.sh`. Rollback:
+  `./scripts/rollback-deployment.sh`. History: `docs/deployments.jsonl`.
 - Jira install was upgraded for `storage:app`
 - Root `package.json` must **not** have `"type": "module"` — that broke
   `@forge/resolver`
@@ -98,6 +100,16 @@ in-app `asUser()` catalog is the source of truth.
 Cursor chat history does not automatically travel to mobile. This document
 is the saved context from the local Forge setup chat
 ([Atlassian Forge app setup](d66346de-8d66-4b44-92e3-3e36f64f8df1)).
+
+### 2026-11-27 — Gate 1 stabilization (DI)
+
+Akeem: GO on Gate 1 defect round. Branch
+`cursor/di-stabilization-round-1-0bfb` off Fluent tip; draft PR vs
+`feature/di-fluent-overview`; deploy+upgrade; no merges. Fixed D1–D9, Tone
+honesty, removals wording, PLAT 62.5% regression (pass), docs sync.
+Sprint goal: retrieved in agile-client, not displayed; no scoring impact.
+Rovo: silent paths removed; site availability still decided by
+`rovo.isEnabled()` / `rovo.open()` at runtime.
 
 ### 2026-08-20 — first push
 

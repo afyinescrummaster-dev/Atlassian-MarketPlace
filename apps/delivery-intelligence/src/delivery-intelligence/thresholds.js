@@ -76,6 +76,21 @@ export const PACING_STATE = {
   UNAVAILABLE: "unavailable",
 };
 
+/** Human-readable pacing labels for UI and generated briefs (never leak raw enums). */
+export const pacingStateLabel = (state) => {
+  switch (state) {
+    case PACING_STATE.ON_PACE:
+      return "on pace";
+    case PACING_STATE.WATCH:
+      return "watch";
+    case PACING_STATE.BEHIND:
+      return "behind current pace";
+    case PACING_STATE.UNAVAILABLE:
+    default:
+      return "unavailable";
+  }
+};
+
 export const AC_DETECTION = {
   DETECTED: "detected",
   NOT_DETECTED: "not_detected",

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { attentionLevelLabel } from "../dashboard-ia.js";
+import { useEffect, useState } from "react";
+import { attentionLevelLabel, formatSeriesAxisLabel } from "../dashboard-ia.js";
 
 const ICON_PATHS = {
   overview: "M3 10.5 10 4l7 6.5V17a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1v-6.5z",
@@ -196,6 +196,19 @@ export const EvidenceDrawer = ({
   canAskRovo,
   variant = "rail",
 }) => {
+  useEffect(() => {
+    if (!title || typeof onClose !== "function") {
+      return undefined;
+    }
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [title, onClose]);
+
   if (!title) {
     return (
       <aside className={`drawer empty-drawer ${variant}`}>
@@ -210,11 +223,15 @@ export const EvidenceDrawer = ({
           <strong>{title}</strong>
           {meta ? <div className="sub">{meta}</div> : null}
         </div>
-        {onClose ? (
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Close details">
-            ×
-          </button>
-        ) : null}
+        <button
+          className="icon-btn"
+          type="button"
+          onClick={onClose}
+          aria-label="Close details"
+          disabled={typeof onClose !== "function"}
+        >
+          Close
+        </button>
       </div>
       <div className="drawer-body">{children}</div>
       <div className="btn-row drawer-actions">
@@ -380,7 +397,11 @@ export const ScopeLine = ({ points }) => {
             {series[index].added ? `+${series[index].added}` : series[index].cumulative}
           </text>
           <text x={x} y={height - 8} textAnchor="middle" className="chart-label muted">
-            {series[index].label === "Sprint start" ? "Start" : String(series[index].label).slice(5)}
+            {series[index].label === "Sprint start"
+              ? "Start"
+              : series[index].label === "Current"
+                ? "Now"
+                : series[index].label}
           </text>
         </g>
       ))}
@@ -412,7 +433,7 @@ export const SeriesSpark = ({ points }) => {
             {series[index].scopeChangePercent == null ? "—" : `+${series[index].scopeChangePercent}%`}
           </text>
           <text x={x} y={height - 8} textAnchor="middle" className="chart-label muted">
-            {series[index].isCurrent ? "Current" : series[index].sprintName}
+            {formatSeriesAxisLabel(series[index])}
           </text>
         </g>
       ))}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke, router, rovo, view } from "@forge/bridge";
 import {
   ROVO_INTENTS,
@@ -21,6 +21,11 @@ import {
   paceHeadline,
   topCoachAttention,
 } from "./dashboard-ia.js";
+import {
+  ROVO_OPEN_FAILED_NOTE,
+  ROVO_UNAVAILABLE_NOTE,
+  resolveRovoHandoff,
+} from "./rovo-handoff.js";
 import { ProductNav } from "./components/DashboardKit.jsx";
 import OverviewView from "./views/OverviewView.jsx";
 import ReadinessView from "./views/ReadinessView.jsx";
@@ -147,6 +152,24 @@ export default function App() {
   const [briefKind, setBriefKind] = useState("team");
   const [copyMessage, setCopyMessage] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const overflowRef = useRef(null);
+
+  const closeOverflowMenu = () => {
+    if (overflowRef.current) {
+      overflowRef.current.open = false;
+    }
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      closeOverflowMenu();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -246,13 +269,14 @@ export default function App() {
 
   const openRovo = async (intent, customPrompt = null) => {
     setAiMessage(null);
-    if (!snapshot) {
-      return;
-    }
-    if (rovoEnabled === false) {
-      setAiMessage(
-        "Atlassian Rovo is not enabled on this site. Deterministic sprint intelligence below still works.",
-      );
+    closeOverflowMenu();
+    const decision = resolveRovoHandoff({
+      snapshot,
+      rovoEnabled,
+      hasPrompt: true,
+    });
+    if (!decision.proceed) {
+      setAiMessage(decision.message);
       return;
     }
 
@@ -266,6 +290,7 @@ export default function App() {
           addedIssueCount: snapshot?.addedIssueCount,
           scopeChangePercent: snapshot?.scopeChangePercent,
           carryoverCount: snapshot?.carryoverCount,
+          intent,
         });
       }
 
@@ -277,7 +302,7 @@ export default function App() {
       });
     } catch {
       setAiMessage(
-        "Could not open the Delivery Intelligence agent. Check that Rovo is enabled and this app is installed.",
+        rovoEnabled === false ? ROVO_UNAVAILABLE_NOTE : ROVO_OPEN_FAILED_NOTE,
       );
     }
   };
@@ -286,7 +311,9 @@ export default function App() {
 
   const copyBrief = async (asMarkdown = false) => {
     setCopyMessage(null);
+    closeOverflowMenu();
     if (!selectedBrief) {
+      setCopyMessage("No brief is available to copy yet.");
       return;
     }
     const text = asMarkdown ? selectedBrief.markdown : selectedBrief.plain;
@@ -304,6 +331,7 @@ export default function App() {
 
   const openBriefInRovo = () => {
     if (!selectedBrief) {
+      setAiMessage("No brief is ready to send to Rovo yet.");
       return;
     }
     const prompt = `Review and refine this ${selectedBrief.title} using Delivery Intelligence facts. Keep coaching language careful and do not invent metrics.\n\n${selectedBrief.plain}`;
@@ -709,16 +737,24 @@ export default function App() {
                 Create brief
               </button>
             ) : null}
-            <details className="overflow">
+            <details className="overflow" ref={overflowRef}>
               <summary className="btn icon-btn" aria-label="More actions">⋯</summary>
               <div className="overflow-menu" role="menu">
-                <button type="button" role="menuitem" disabled={!snapshot?.sprint} onClick={() => openRovo(ROVO_INTENTS.explain)}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => openRovo(ROVO_INTENTS.explain)}
+                >
                   Explain sprint
                 </button>
-                <button type="button" role="menuitem" disabled={!snapshot?.sprint} onClick={() => openRovo(ROVO_INTENTS.recommend)}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => openRovo(ROVO_INTENTS.recommend)}
+                >
                   Recommend actions
                 </button>
-                <button type="button" role="menuitem" disabled={!selectedBrief} onClick={() => copyBrief(true)}>
+                <button type="button" role="menuitem" onClick={() => copyBrief(true)}>
                   Copy Markdown
                 </button>
               </div>
@@ -824,12 +860,16 @@ export default function App() {
           {renderDrilldown(drilldown)}
           {navMessage ? <p className="note page-note">{navMessage}</p> : null}
           {rovoEnabled === false ? (
-            <p className="note page-note">
-              Atlassian Rovo is not enabled on this site. Deterministic metrics
-              remain available; AI explanations require Rovo on a paid Jira plan.
+            <p className="note page-note" role="status">
+              {ROVO_UNAVAILABLE_NOTE} AI explanations require Rovo on a paid
+              Jira plan.
             </p>
           ) : null}
-          {aiMessage ? <p className="note page-note">{aiMessage}</p> : null}
+          {aiMessage ? (
+            <p className="note page-note" role="status">
+              {aiMessage}
+            </p>
+          ) : null}
         </>
       )}
     </div>

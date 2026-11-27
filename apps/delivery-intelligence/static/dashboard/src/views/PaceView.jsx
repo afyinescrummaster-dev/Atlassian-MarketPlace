@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  affectedIssueCount,
   coachInterpretations,
   groupPaceSignals,
   isSprintEndPassed,
@@ -27,7 +28,10 @@ export default function PaceView({ snapshot, issueIndex, onOpenIssue, onAskRovo,
   const coaching = coachInterpretations(snapshot);
   const closed = isSprintEndPassed(snapshot?.sprint);
   const [selectedId, setSelectedId] = useState(groups[0]?.id || null);
-  const selected = groups.find((row) => row.id === selectedId) || groups[0] || null;
+  const [drawerDismissed, setDrawerDismissed] = useState(false);
+  const selected = drawerDismissed
+    ? null
+    : groups.find((row) => row.id === selectedId) || groups[0] || null;
   const selectedIssue = selected?.issueKeys?.[0]
     ? issueIndex.get(selected.issueKeys[0])
     : null;
@@ -43,7 +47,7 @@ export default function PaceView({ snapshot, issueIndex, onOpenIssue, onAskRovo,
     {
       id: "count",
       label: "Affected",
-      render: (row) => row.issueKeys?.length || row.count || "—",
+      render: (row) => affectedIssueCount(row) || "—",
     },
     {
       id: "action",
@@ -93,7 +97,10 @@ export default function PaceView({ snapshot, issueIndex, onOpenIssue, onAskRovo,
             columns={columns}
             rows={groups.map((group) => ({ ...group, key: group.id }))}
             selectedKey={selected?.id}
-            onSelect={(row) => setSelectedId(row.id)}
+            onSelect={(row) => {
+              setDrawerDismissed(false);
+              setSelectedId(row.id);
+            }}
             empty="No delivery-pace signals were grouped for this sprint."
           />
         </section>
@@ -150,9 +157,19 @@ export default function PaceView({ snapshot, issueIndex, onOpenIssue, onAskRovo,
             ? `${selectedIssue.key} ${selectedIssue.summary || ""}`.trim()
             : selected?.title
         }
-        meta={selected ? `${selected.issueKeys?.length || 0} affected issues` : null}
+        meta={
+          selected
+            ? `${affectedIssueCount(selected)} affected issue${
+                affectedIssueCount(selected) === 1 ? "" : "s"
+              }`
+            : null
+        }
         canOpenJira={Boolean(selectedIssue?.key || selected?.issueKeys?.length)}
         canAskRovo={Boolean(selected)}
+        onClose={() => {
+          setDrawerDismissed(true);
+          setSelectedId(null);
+        }}
         onOpenJira={() =>
           selectedIssue?.key
             ? onOpenIssue(selectedIssue.key)
