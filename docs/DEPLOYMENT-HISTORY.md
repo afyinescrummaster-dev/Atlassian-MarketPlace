@@ -31,7 +31,7 @@ Do not guess a rollback into unrecorded 2.1.0–2.12.0 deploys.
 
 | App | Deployment revision | Git SHA | Forge env | Forge version | When (UTC) | Notes |
 |---|---|---|---|---|---|---|
-| Delivery Intelligence | `deploy/di/development/5.1.0` | `215e6ac0358f` | `development` | **5.1.0** | 2026-11-27T19:52:17Z | Deployed Fluent line with Caleb smoke header from clean 215e6ac0358f; install upgraded on one-atlas-qzzp |
+| Delivery Intelligence | `deploy/di/development/5.2.0` | `5069b8faa0e7` | `development` | **5.2.0** | 2026-11-27T21:58:06Z | Deployed from clean 5069b8faa0e7 via scripts/forge-deploy.sh |
 | Legacy root app | `deploy/legacy/development/4.8.0` | `a0c7df4` | `development` | **4.8.0** | 2026-08-27T00:00:00Z | Admin Health v0.4 boxed Custom UI |
 
 Site: `https://one-atlas-qzzp.atlassian.net`
@@ -43,6 +43,7 @@ Code: `apps/delivery-intelligence/`
 
 | When (UTC) | Kind | Branch | Git SHA | Env | Forge version | Revision | Result |
 |---|---|---|---|---|---|---|---|
+| 2026-11-27T21:58:06Z | deploy | cursor/di-stabilization-round-1-0bfb | `5069b8faa0e7` | development | 5.2.0 | `deploy/di/development/5.2.0` | Deployed from clean 5069b8faa0e7 via scripts/forge-deploy.sh |
 | 2026-11-27T19:52:17Z | deploy | feature/di-fluent-overview | `215e6ac0358f` | development | 5.1.0 | `deploy/di/development/5.1.0` | Deployed Fluent line with Caleb smoke header from clean 215e6ac0358f; install upgraded on one-atlas-qzzp |
 | 2026-11-27T19:49:31Z | deploy | feature/di-fluent-overview | `c8524e4e015f` | development | 5.0.0 | `deploy/di/development/5.0.0` | Redeployed Fluent UI line (tip beyond 3.4.0 code b504c97) from clean c8524e4e015f via forge deploy --approve MAJOR_VERSION_RULE; install upgraded on one-atlas-qzzp |
 | 2026-09-22T01:08:03Z | deploy | feature/di-fluent-overview | `b504c97ca05e` | development | 3.4.0 | `deploy/di/development/3.4.0` | Deployed from clean b504c97ca05e via scripts/forge-deploy.sh |

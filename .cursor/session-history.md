@@ -43,7 +43,10 @@ on `one-atlas-qzzp`, do not merge.
 81/81 passing (`npm test` in `apps/delivery-intelligence`)
 
 ### Deploy
-See end-of-session deploy record / `docs/DEPLOYMENT-HISTORY.md`.
+- Forge development **5.2.0** (`deploy/di/development/5.2.0`) @ `5069b8f`
+- Install on `one-atlas-qzzp`: already at latest after deploy
+- Tests: 81/81; dashboard build clean; forge lint clean
+- Working tree was clean at deploy; build artifacts not committed
 
 ---
 

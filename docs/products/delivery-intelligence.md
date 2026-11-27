@@ -8,8 +8,9 @@ Status: **`di-v1.1.0`** remains the latest official milestone on `main`
 (Sprint Intelligence). Active test line is `feature/di-fluent-overview`
 (Fluent UI Build **2.13.0**). Gate 1 defect round:
 `cursor/di-stabilization-round-1-0bfb` (draft PR vs Fluent; do not merge).
-Live Forge development before this round: **5.1.0**
-(`deploy/di/development/5.1.0`, UI Build `2.13.0`). V1 baseline
+Live Forge development after Gate 1 round 1: **5.2.0**
+(`deploy/di/development/5.2.0`, UI Build `2.13.0`; prior tip **5.1.0**).
+V1 baseline
 `di-v1.0.0` @ `c780ff5` remains. Historical recovered known-good remains
 `di-v0.1.1` @ `4f44eb3` — do not delete.
 See `docs/RECOVERY-2.8.0.md`. Working rules: `AGENTS.md`. Deploy log:

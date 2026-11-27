@@ -109,7 +109,8 @@ Akeem: GO on Gate 1 defect round. Branch
 honesty, removals wording, PLAT 62.5% regression (pass), docs sync.
 Sprint goal: retrieved in agile-client, not displayed; no scoring impact.
 Rovo: silent paths removed; site availability still decided by
-`rovo.isEnabled()` / `rovo.open()` at runtime.
+`rovo.isEnabled()` / `rovo.open()` at runtime. Deployed Forge
+development **5.2.0**; install upgraded/confirmed on one-atlas-qzzp.
 
 ### 2026-08-20 — first push
 

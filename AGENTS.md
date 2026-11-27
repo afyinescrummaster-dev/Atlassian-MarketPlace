@@ -38,9 +38,9 @@ names them.
 **Official milestone on `main`:** `di-v1.1.0` — Sprint Intelligence.
 **Active test line:** `feature/di-fluent-overview` (UI Build **2.13.0**).
 **Gate 1 defect round:** `cursor/di-stabilization-round-1-0bfb` (draft PR
-vs Fluent; do not merge). Live Forge development before Gate 1 deploy:
-**5.1.0** (`deploy/di/development/5.1.0`). V1 baseline `di-v1.0.0` @
-`c780ff5` remains the prior official milestone.
+vs Fluent; do not merge). Live Forge development: **5.2.0**
+(`deploy/di/development/5.2.0`, UI Build `2.13.0`). V1 baseline
+`di-v1.0.0` @ `c780ff5` remains the prior official milestone.
 
 **Historical recovered known-good:** `di-v0.1.1` → `4f44eb3` → Forge
 **2.13.0** → PLAT accepted. Keep this tag.
