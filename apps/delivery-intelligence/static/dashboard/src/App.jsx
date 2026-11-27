@@ -472,6 +472,7 @@ export default function App() {
     <div className="shell">
       <header className="header">
         <div>
+          <div className="meta">Caleb</div>
           <h1>Delivery Intelligence</h1>
           <div className="meta">
             {contextLine}
